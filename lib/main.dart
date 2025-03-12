@@ -54,7 +54,7 @@ class MyApp extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, _) {
         return MaterialApp(
-          title: 'Runner',
+          title: 'AshTrail',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,

@@ -564,7 +564,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ];
 
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Runner'),
+      appBar: const CustomAppBar(title: 'AshTrail'),
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[

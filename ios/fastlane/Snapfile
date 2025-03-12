@@ -1,0 +1,35 @@
+# Devices to take screenshots on
+devices([
+  "iPhone 16 Pro Max",
+  # "iPhone 15",
+  # "iPad Pro (12.9-inch) (6th generation)",
+  # "iPad Air (5th generation)"
+])
+
+# Languages
+languages([
+  "en-US",
+  # Add other languages as needed
+])
+
+# The name of the scheme to use for UI tests
+scheme("RunnerUITests")
+
+# Where to store the screenshots
+output_directory("./screenshots")
+
+# Clear previous screenshots before creating new ones
+clear_previous_screenshots(true)
+
+# Additional config for better screenshots
+concurrent_simulators(false)
+stop_after_first_error(true)
+
+# Remove the '#' to set the status bar to 9:41 AM, and show full battery and reception. See also override_status_bar_arguments for custom options.
+# override_status_bar(true)
+
+# Arguments to pass to the app on launch. See https://docs.fastlane.tools/actions/snapshot/#launch-arguments
+# launch_arguments(["-favColor red"])
+
+# For more information about all available options run
+# fastlane action snapshot
