@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,33 +7,46 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'dart:io' show Platform;
 import 'theme/theme_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
+// Check if app is running in screenshot mode
+bool get isScreenshotMode {
+  if (Platform.isIOS) {
+    final args = PlatformDispatcher.instance.defaultRouteName;
+    return args.contains('FASTLANE_SNAPSHOT');
+  }
+  return false;
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase with persistence
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Skip Firebase initialization in screenshot mode
+  if (!isScreenshotMode) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  // Enable Firestore caching
-  FirebaseFirestore.instance.settings = const Settings(
-      persistenceEnabled: true, cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED);
+    // Enable Firestore caching
+    FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED);
 
-  // Auto sign-in for development mode
-  if (kDebugMode) {
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: 'test@test.com',
-        password: 'test11',
-      );
-      print('Debug mode: Auto signed in with test account');
-    } catch (e) {
-      print('Debug mode: Auto sign-in failed: $e');
+    // Auto sign-in for development mode (skip for screenshot mode)
+    if (kDebugMode && !isScreenshotMode) {
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: 'test@test.com',
+          password: 'test11',
+        );
+        print('Debug mode: Auto signed in with test account');
+      } catch (e) {
+        print('Debug mode: Auto sign-in failed: $e');
+      }
     }
   }
 
@@ -54,7 +68,7 @@ class MyApp extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, _) {
         return MaterialApp(
-          title: 'AshTrail',
+          title: 'Runner',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,

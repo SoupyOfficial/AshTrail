@@ -6,34 +6,41 @@
 //
 
 import XCTest
-@testable import SnapshotHelper
 
 final class RunnerUITests: XCTestCase {
 
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
-        continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
+        continueAfterFailure = true
+        
         let app = XCUIApplication()
-        setupSnapshot(app)
+        
+        // Configure the app to know it's in screenshot mode
+        app.launchArguments += [
+            "-SCREENSHOT_MODE"                  // Add a special launch argument that your Flutter app can detect
+        ]
+        
         app.launch()
     }
 
     override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        // Put teardown code here. This method is called before the invocation of each test method in the class.
     }
 
     @MainActor
     func testScreenshots() throws {
-        // UI tests must launch the application that they test.
         let app = XCUIApplication()
         
-        // Take a screenshot of the main screen
-        snapshot("01_MainScreen")
-
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        // Wait for Flutter to stabilize
+        sleep(10)
+        
+        // Take screenshot directly
+        let screenshot = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = "01_HomeScreen.png"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        
+        // You can add more screenshots by navigating through your app
+        // and taking more screenshots
     }
 }

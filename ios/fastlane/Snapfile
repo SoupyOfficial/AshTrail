@@ -1,22 +1,20 @@
 # Devices to take screenshots on
 devices([
-  "iPhone 16 Pro Max",
-  # "iPhone 15",
-  # "iPad Pro (12.9-inch) (6th generation)",
-  # "iPad Air (5th generation)"
+  "Screenshot-iPhone16", # From iOS 18.2
+  # "iPhone 15", # From iOS 17.2
+  # "iPad Pro (12.9-inch) (6th generation)" # From iOS 17.2
 ])
 
 # Languages
 languages([
-  "en-US",
-  # Add other languages as needed
+  "en-US"
 ])
 
 # The name of the scheme to use for UI tests
 scheme("RunnerUITests")
 
-# Where to store the screenshots
-output_directory("./screenshots")
+# Where to store the screenshots - use absolute path
+output_directory(File.expand_path("~/Documents/smoke_log/ios/screenshots"))
 
 # Clear previous screenshots before creating new ones
 clear_previous_screenshots(true)
@@ -25,11 +23,11 @@ clear_previous_screenshots(true)
 concurrent_simulators(false)
 stop_after_first_error(true)
 
-# Remove the '#' to set the status bar to 9:41 AM, and show full battery and reception. See also override_status_bar_arguments for custom options.
-# override_status_bar(true)
+# Override status bar for consistent screenshots
+override_status_bar(true)
 
-# Arguments to pass to the app on launch. See https://docs.fastlane.tools/actions/snapshot/#launch-arguments
-# launch_arguments(["-favColor red"])
+# Arguments to pass to the app on launch
+launch_arguments(["-FASTLANE_SNAPSHOT", "YES"])
 
 # For more information about all available options run
 # fastlane action snapshot
