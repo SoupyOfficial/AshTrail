@@ -12,18 +12,35 @@ import 'theme/theme_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'utils/coordinate_finder.dart';
 
 // Check if app is running in screenshot mode
 bool get isScreenshotMode {
-  if (Platform.isIOS) {
-    final args = PlatformDispatcher.instance.defaultRouteName;
-    return args.contains('FASTLANE_SNAPSHOT');
+  // Check using dart-define (works with XCUITest)
+  if (const bool.fromEnvironment('SCREENSHOT_MODE', defaultValue: false)) {
+    return true;
   }
+
+  // Fallback to route name check (for Fastlane)
+  if (Platform.isIOS) {
+    try {
+      final args = PlatformDispatcher.instance.defaultRouteName;
+      if (args.contains('FASTLANE_SNAPSHOT') ||
+          args.contains('SCREENSHOT_MODE')) {
+        return true;
+      }
+    } catch (_) {}
+  }
+
   return false;
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Print debug info to help with troubleshooting
+  print('SCREENSHOT_MODE: ${isScreenshotMode}');
+  print('Platform route: ${PlatformDispatcher.instance.defaultRouteName}');
 
   // Skip Firebase initialization in screenshot mode
   if (!isScreenshotMode) {
@@ -65,34 +82,41 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
+    Widget app = Consumer<ThemeProvider>(
       builder: (context, themeProvider, _) {
         return MaterialApp(
-          title: 'Runner',
+          title: 'Smoke Log',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
-          // Add this key to preserve navigation state when theme changes
           key: ValueKey(themeProvider.themeMode),
-          // Preserve navigation state using navigatorKey
           navigatorKey: GlobalNavigatorKey.navigatorKey,
-          home: StreamBuilder<User?>(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snapshot.hasData) {
-                return const HomeScreen();
-              }
-              return const LoginScreen();
-            },
-          ),
+          home: isScreenshotMode
+              ? const HomeScreen() // Direct to HomeScreen in screenshot mode
+              : StreamBuilder<User?>(
+                  stream: FirebaseAuth.instance.authStateChanges(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (snapshot.hasData) {
+                      return const HomeScreen();
+                    }
+                    return const LoginScreen();
+                  },
+                ),
         );
       },
     );
+
+    // Wrap with CoordinateFinder only during development
+    if (isScreenshotMode && kDebugMode) {
+      app = CoordinateFinder(child: app);
+    }
+
+    return app;
   }
 }
 
