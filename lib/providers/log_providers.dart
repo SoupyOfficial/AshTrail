@@ -3,21 +3,40 @@ import '../models/log_aggregates.dart';
 import '../models/log.dart';
 import '../services/log_repository.dart';
 import './auth_provider.dart';
+import './firebase_providers.dart'; // Add this import
 
-// Repository provider
+// Repository provider with Firebase initialization
 final logRepositoryProvider = Provider<LogRepository>((ref) {
+  // Wait for Firebase to be initialized
+  final isInitialized =
+      ref.watch(firebaseInitializerProvider).valueOrNull ?? false;
   final authState = ref.watch(authStateProvider);
+
   return authState.when(
-    data: (user) => LogRepository(user?.uid ?? ''),
+    data: (user) {
+      final repo = LogRepository(user?.uid ?? '');
+      // If we have a valid user and Firebase is initialized, start sync service
+      if (user != null && isInitialized) {
+        repo.startSyncService();
+      }
+      return repo;
+    },
     loading: () => LogRepository(''),
     error: (_, __) => LogRepository(''),
   );
 });
 
-// Stream of logs
+// Stream of logs with better error handling
 final logsStreamProvider = StreamProvider<List<Log>>((ref) {
   final repository = ref.watch(logRepositoryProvider);
-  return repository.streamLogs();
+
+  // First try to get cached logs
+  try {
+    return repository.streamLogs();
+  } catch (e) {
+    print('Error loading logs stream: $e');
+    return Stream.value([]);
+  }
 });
 
 // Computed aggregates using the updated LogAggregates model.

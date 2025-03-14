@@ -550,6 +550,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  Widget _buildSyncButton() {
+    return IconButton(
+      icon: const Icon(Icons.sync),
+      tooltip: 'Sync now',
+      onPressed: () {
+        final logRepository = ref.read(logRepositoryProvider);
+        logRepository.syncNow().then((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sync completed')),
+          );
+        }).catchError((e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sync failed. Check your connection')),
+          );
+        });
+      },
+    );
+  }
+
   @override
   void dispose() {
     _updateTimer?.cancel();

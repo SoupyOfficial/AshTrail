@@ -6,6 +6,7 @@ import '../screens/login_screen.dart';
 import '../services/credential_service.dart';
 import 'theme_toggle_switch.dart';
 import 'user_switcher.dart';
+import 'sync_indicator.dart';
 
 class CustomAppBar extends ConsumerStatefulWidget
     implements PreferredSizeWidget {
@@ -75,6 +76,12 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
         return AppBar(
           title: Text(widget.title),
           actions: [
+            // Keep only the sync indicator (removed duplicate ConnectivityIndicator)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.0),
+              child: SyncIndicator(),
+            ),
+            // User account switcher
             FutureBuilder<List<Map<String, String>>>(
               future: _getUserAccounts(),
               builder: (context, snapshot) {

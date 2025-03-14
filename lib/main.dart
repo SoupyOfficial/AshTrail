@@ -6,8 +6,8 @@ import 'package:smoke_log/firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:provider/provider.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart'
+    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'theme/theme_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
@@ -21,18 +21,51 @@ bool get isScreenshotMode {
     return true;
   }
 
-  // Fallback to route name check (for Fastlane)
-  if (Platform.isIOS) {
-    try {
+  // Skip platform-specific checks on web
+  if (kIsWeb) {
+    return false;
+  }
+
+  // Fallback to route name check (for Fastlane) - only for iOS
+  try {
+    // Use Foundation.defaultTargetPlatform instead of Platform.isIOS
+    final platform = defaultTargetPlatform;
+    if (platform == TargetPlatform.iOS) {
       final args = PlatformDispatcher.instance.defaultRouteName;
       if (args.contains('FASTLANE_SNAPSHOT') ||
           args.contains('SCREENSHOT_MODE')) {
         return true;
       }
-    } catch (_) {}
-  }
+    }
+  } catch (_) {}
 
   return false;
+}
+
+// Global flag to track if Firebase is initialized
+bool isFirebaseInitialized = false;
+
+Future<void> initializeFirebase() async {
+  if (isFirebaseInitialized || isScreenshotMode) return;
+
+  try {
+    // Initialize Firebase first
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    // Only after successful initialization, configure Firestore
+    FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED);
+
+    isFirebaseInitialized = true;
+    print('Firebase initialized with offline persistence enabled');
+  } catch (e) {
+    print('Error initializing Firebase: $e');
+    // Re-throw to ensure the error is handled upstream
+    rethrow;
+  }
 }
 
 void main() async {
@@ -42,28 +75,27 @@ void main() async {
   print('SCREENSHOT_MODE: ${isScreenshotMode}');
   print('Platform route: ${PlatformDispatcher.instance.defaultRouteName}');
 
-  // Skip Firebase initialization in screenshot mode
+  // Initialize Firebase with a separate function
   if (!isScreenshotMode) {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    try {
+      await initializeFirebase();
 
-    // Enable Firestore caching
-    FirebaseFirestore.instance.settings = const Settings(
-        persistenceEnabled: true,
-        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED);
-
-    // Auto sign-in for development mode (skip for screenshot mode)
-    if (kDebugMode && !isScreenshotMode) {
-      try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: 'test@test.com',
-          password: 'test11',
-        );
-        print('Debug mode: Auto signed in with test account');
-      } catch (e) {
-        print('Debug mode: Auto sign-in failed: $e');
+      // Auto sign-in for development mode (skip for screenshot mode)
+      if (kDebugMode && !isScreenshotMode) {
+        try {
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: 'test@test.com',
+            password: 'test11',
+          );
+          print('Debug mode: Auto signed in with test account');
+        } catch (e) {
+          print('Debug mode: Auto sign-in failed: $e');
+        }
       }
+    } catch (e) {
+      print('Error in Firebase setup: $e');
+      // Continue with app initialization even if Firebase fails
+      // The app will handle Firebase unavailability appropriately
     }
   }
 

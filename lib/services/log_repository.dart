@@ -1,28 +1,43 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/log.dart';
+import 'sync_service.dart';
 
 class LogRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String userId;
+  late final SyncService _syncService;
+  bool _syncServiceStarted = false;
 
   // Cache configuration
   static const Duration cacheFreshness = Duration(hours: 12);
 
-  LogRepository(this.userId);
+  LogRepository(this.userId) {
+    _syncService = SyncService(_firestore, userId);
+    _syncService.startPeriodicSync();
+  }
+
+  SyncService get syncService => _syncService;
 
   CollectionReference<Map<String, dynamic>> get _userLogsCollection {
     return _firestore.collection('users').doc(userId).collection('logs');
+  }
+
+  void startSyncService() {
+    if (_syncServiceStarted) return;
+    _syncService.startPeriodicSync();
+    _syncServiceStarted = true;
   }
 
   // Add log with offline support
   Future<void> addLog(Log log) async {
     try {
       await _userLogsCollection.add(log.toMap());
+      // Try to sync immediately if possible, but don't wait for it
+      _syncService.syncWithServer().catchError((_) {});
     } catch (e) {
       // Handle offline cases
       if (e is FirebaseException && e.code == 'unavailable') {
         // Firestore SDK will auto-queue the write when connection returns
-        // Just let the caller know it's been queued
         print('Network unavailable, operation queued for sync');
       } else {
         rethrow;
@@ -34,22 +49,20 @@ class LogRepository {
   Stream<List<Log>> streamLogs({bool cacheOnly = false}) {
     final query = _userLogsCollection.orderBy('timestamp', descending: true);
 
-    if (cacheOnly) {
-      return query
-          .get(const GetOptions(source: Source.cache))
-          .asStream()
-          .map((snapshot) {
-        return snapshot.docs
-            .map((doc) => Log.fromMap(doc.data(), doc.id))
-            .toList();
-      });
-    } else {
-      return query.snapshots().map((snapshot) {
-        return snapshot.docs
-            .map((doc) => Log.fromMap(doc.data(), doc.id))
-            .toList();
-      });
-    }
+    // In all cases, start by attempting to get from cache
+    return query.snapshots(includeMetadataChanges: true).map((snapshot) {
+      // Check if we're getting data from cache or server
+      final isFromCache = snapshot.metadata.isFromCache;
+      print('Getting logs from ${isFromCache ? "cache" : "server"}');
+
+      return snapshot.docs
+          .map((doc) => Log.fromMap(doc.data(), doc.id))
+          .toList();
+    }).handleError((error) {
+      print('Error in streamLogs: $error');
+      // Fall back to an empty list in case of error
+      return <Log>[];
+    });
   }
 
   // Get logs from cache first, then server if needed
@@ -79,6 +92,8 @@ class LogRepository {
 
     try {
       await _userLogsCollection.doc(log.id).update(log.toMap());
+      // Try to sync immediately if possible
+      _syncService.syncWithServer().catchError((_) {});
     } catch (e) {
       if (e is FirebaseException && e.code == 'unavailable') {
         // Operation will be queued automatically by Firestore SDK
@@ -93,6 +108,8 @@ class LogRepository {
   Future<void> deleteLog(String logId) async {
     try {
       await _userLogsCollection.doc(logId).delete();
+      // Try to sync immediately if possible
+      _syncService.syncWithServer().catchError((_) {});
     } catch (e) {
       if (e is FirebaseException && e.code == 'unavailable') {
         // Operation will be queued automatically by Firestore SDK
@@ -130,5 +147,13 @@ class LogRepository {
     }
 
     await batch.commit();
+  }
+
+  // Force manual sync with server
+  Future<void> syncNow() => _syncService.syncWithServer();
+
+  // Cleanup resources
+  void dispose() {
+    _syncService.dispose();
   }
 }
