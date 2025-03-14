@@ -110,7 +110,7 @@ final class RunnerUITests: XCTestCase {
                     print("Screenshot saved (iPhone resized) to \(fileURL.path)")
                 }
             } 
-            else if deviceName.contains("iPad_Pro_11-inch_(M4)") {
+            else if deviceName.contains("iPad_Pro_13-inch_(M4)") {
                 if let image = UIImage(data: pngData), let resizedImageData = resizeImageForAppStore(image, isIPad: true).pngData() {
                     try resizedImageData.write(to: fileURL)
                     print("Screenshot saved (iPad resized) to \(fileURL.path)")

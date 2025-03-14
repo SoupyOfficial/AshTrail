@@ -10,11 +10,13 @@ import 'sync_indicator.dart';
 
 class CustomAppBar extends ConsumerStatefulWidget
     implements PreferredSizeWidget {
-  final String title;
+  final String? title; // Make title optional
+  final bool useIcon; // Add this flag
 
   const CustomAppBar({
     super.key,
-    required this.title,
+    this.title,
+    this.useIcon = true, // Default to using icon
   });
 
   @override
@@ -74,7 +76,12 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
         final currentEmail = user?.email ?? 'Guest';
 
         return AppBar(
-          title: Text(widget.title),
+          title: widget.useIcon
+              ? Image.asset(
+                  'assets/images/app_icon.png',
+                  height: 32, // Adjust size as needed
+                )
+              : Text(widget.title ?? ''),
           actions: [
             // Keep only the sync indicator (removed duplicate ConnectivityIndicator)
             const Padding(
@@ -108,8 +115,14 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
           ],
         );
       },
-      loading: () => AppBar(title: Text(widget.title)),
-      error: (_, __) => AppBar(title: Text(widget.title)),
+      loading: () => AppBar(
+          title: widget.useIcon
+              ? Image.asset('assets/images/app_icon.png', height: 32)
+              : Text(widget.title ?? '')),
+      error: (_, __) => AppBar(
+          title: widget.useIcon
+              ? Image.asset('assets/images/app_icon.png', height: 32)
+              : Text(widget.title ?? '')),
     );
   }
 }

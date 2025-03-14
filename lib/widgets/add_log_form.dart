@@ -234,13 +234,25 @@ class _AddLogFormState extends ConsumerState<AddLogForm> {
               ],
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.keyboard_hide),
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                  },
+                  tooltip: 'Dismiss keyboard',
+                ),
+                TextField(
+                  controller: _notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
             ),
           ],
         ),

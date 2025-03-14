@@ -72,7 +72,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Print debug info to help with troubleshooting
-  print('SCREENSHOT_MODE: ${isScreenshotMode}');
+  print('SCREENSHOT MODE: ${isScreenshotMode}');
   print('Platform route: ${PlatformDispatcher.instance.defaultRouteName}');
 
   // Initialize Firebase with a separate function
