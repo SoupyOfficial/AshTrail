@@ -46,7 +46,7 @@ class _SyncIndicatorState extends ConsumerState<SyncIndicator> {
           });
 
           _successTimer?.cancel();
-          _successTimer = Timer(const Duration(seconds: 10), () {
+          _successTimer = Timer(const Duration(seconds: 3), () {
             if (mounted) {
               setState(() {
                 _showSuccess = false;

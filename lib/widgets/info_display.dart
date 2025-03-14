@@ -56,7 +56,7 @@ class InfoDisplay extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Time Since Last Hit: ${formatDurationHHMMSS(timeSinceLastHit.inSeconds.toDouble() + timeSinceLastHit.inMilliseconds / 1000.0, detailed: true)}',
+              'Time Since Last Hit: ${formatDurationHHMMSS(timeSinceLastHit.inMilliseconds / 1000.0, detailed: true)}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),

@@ -122,174 +122,177 @@ class _EditLogScreenState extends ConsumerState<EditLogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Log'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Display timestamp (non-editable)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Text(
-                  'Timestamp: ${_timestamp.toLocal().toString().split('.')[0]}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.secondary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-              // Duration field
-              TextFormField(
-                initialValue: formatSecondsDisplay(_durationSeconds),
-                decoration: const InputDecoration(
-                  labelText: 'Duration (seconds)',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter duration';
-                  }
-                  if (double.tryParse(value) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
-                onChanged: (value) {
-                  double? parsed = double.tryParse(value);
-                  if (parsed != null) {
-                    _durationSeconds = parsed; // Store full precision
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Replace text field with chips
-              _buildReasonChips(),
-
-              const SizedBox(height: 16),
-
-              // Mood rating
-              Row(
-                children: [
-                  Expanded(
-                    child: RatingSlider(
-                      label: 'Mood',
-                      value: _moodRating == -1 ? 5 : _moodRating,
-                      onChanged: (val) {
-                        setState(() {
-                          _moodRating = val;
-                        });
-                      },
-                      activeColor:
-                          _moodRating == -1 ? Colors.grey : Colors.blue,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Edit Log'),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Display timestamp (non-editable)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Text(
+                    'Timestamp: ${_timestamp.toLocal().toString().split('.')[0]}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Theme.of(context).colorScheme.secondary,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      setState(() {
-                        _moodRating = -1;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Physical rating
-              Row(
-                children: [
-                  Expanded(
-                    child: RatingSlider(
-                      label: 'Physical',
-                      value: _physicalRating == -1 ? 5 : _physicalRating,
-                      onChanged: (val) {
-                        setState(() {
-                          _physicalRating = val;
-                        });
-                      },
-                      activeColor:
-                          _physicalRating == -1 ? Colors.grey : Colors.blue,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      setState(() {
-                        _physicalRating = -1;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Potency rating
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                      'Potency strength: ${_potencyRating.toStringAsFixed(2)}'),
-                  Slider(
-                    value: _potencyRating,
-                    min: 0.25,
-                    max: 2.0,
-                    divisions:
-                        7, // Creates steps: 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0
-                    label: _potencyRating.toStringAsFixed(2),
-                    onChanged: (value) {
-                      setState(() {
-                        _potencyRating = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Notes field
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  border: OutlineInputBorder(),
                 ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 24),
 
-              // Save and Cancel buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey,
+                // Duration field
+                TextFormField(
+                  initialValue: formatSecondsDisplay(_durationSeconds),
+                  decoration: const InputDecoration(
+                    labelText: 'Duration (seconds)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter duration';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    return null;
+                  },
+                  onChanged: (value) {
+                    double? parsed = double.tryParse(value);
+                    if (parsed != null) {
+                      _durationSeconds = parsed; // Store full precision
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Replace text field with chips
+                _buildReasonChips(),
+
+                const SizedBox(height: 16),
+
+                // Mood rating
+                Row(
+                  children: [
+                    Expanded(
+                      child: RatingSlider(
+                        label: 'Mood',
+                        value: _moodRating == -1 ? 5 : _moodRating,
+                        onChanged: (val) {
+                          setState(() {
+                            _moodRating = val;
+                          });
+                        },
+                        activeColor:
+                            _moodRating == -1 ? Colors.grey : Colors.blue,
                       ),
-                      child: const Text('Cancel'),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _updateLog,
-                      child: const Text('Save Changes'),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () {
+                        setState(() {
+                          _moodRating = -1;
+                        });
+                      },
                     ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Physical rating
+                Row(
+                  children: [
+                    Expanded(
+                      child: RatingSlider(
+                        label: 'Physical',
+                        value: _physicalRating == -1 ? 5 : _physicalRating,
+                        onChanged: (val) {
+                          setState(() {
+                            _physicalRating = val;
+                          });
+                        },
+                        activeColor:
+                            _physicalRating == -1 ? Colors.grey : Colors.blue,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () {
+                        setState(() {
+                          _physicalRating = -1;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Potency rating
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        'Potency strength: ${_potencyRating.toStringAsFixed(2)}'),
+                    Slider(
+                      value: _potencyRating,
+                      min: 0.25,
+                      max: 2.0,
+                      divisions:
+                          7, // Creates steps: 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0
+                      label: _potencyRating.toStringAsFixed(2),
+                      onChanged: (value) {
+                        setState(() {
+                          _potencyRating = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Notes field
+                TextFormField(
+                  controller: _notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                    border: OutlineInputBorder(),
                   ),
-                ],
-              ),
-            ],
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 24),
+
+                // Save and Cancel buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey,
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _updateLog,
+                        child: const Text('Save Changes'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
