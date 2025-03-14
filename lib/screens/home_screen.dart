@@ -388,14 +388,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             }),
                             const SizedBox(height: 16),
 
-                            // Notes field
-                            TextField(
-                              controller: notesController,
-                              decoration: const InputDecoration(
-                                labelText: 'Notes (optional)',
-                                border: OutlineInputBorder(),
-                              ),
-                              maxLines: 3,
+                            // Notes field with keyboard dismiss button
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.keyboard_hide),
+                                  onPressed: () {
+                                    FocusScope.of(context).unfocus();
+                                  },
+                                  tooltip: 'Dismiss keyboard',
+                                ),
+                                TextField(
+                                  controller: notesController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Notes (optional)',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 3,
+                                ),
+                              ],
                             ),
                           ],
                         ),

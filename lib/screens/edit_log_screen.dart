@@ -259,14 +259,27 @@ class _EditLogScreenState extends ConsumerState<EditLogScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Notes field
-                TextFormField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
+                const SizedBox(height: 16),
+                // Add keyboard dismiss button above TextField
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.keyboard_hide),
+                      onPressed: () {
+                        FocusScope.of(context).unfocus();
+                      },
+                      tooltip: 'Dismiss keyboard',
+                    ),
+                    TextField(
+                      controller: _notesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
