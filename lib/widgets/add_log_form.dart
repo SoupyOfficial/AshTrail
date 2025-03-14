@@ -93,8 +93,8 @@ class _AddLogFormState extends ConsumerState<AddLogForm> {
       _durationSeconds = 0;
       _notesController.clear();
       _selectedReasons = [];
-      _moodRating = 7;
-      _physicalRating = 7;
+      _moodRating = -1;
+      _physicalRating = -1;
     });
   }
 
