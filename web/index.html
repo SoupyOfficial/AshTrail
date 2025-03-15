@@ -20,7 +20,15 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="A smoke logging application">
+
+  <!-- Apple web sign-in meta tags -->
+  <meta name="appleid-signin-client-id" content="[YOUR_SERVICES_ID]">
+  <meta name="appleid-signin-scope" content="name email">
+  <meta name="appleid-signin-redirect-uri" content="[YOUR_REDIRECT_URI]">
+  <meta name="appleid-signin-state" content="[STATE]">
+  <meta name="appleid-signin-nonce" content="[NONCE]">
+  <meta name="appleid-signin-use-popup" content="true">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -31,11 +39,33 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>smoke_log</title>
+  <title>AshTrail</title>
   <link rel="manifest" href="manifest.json">
+
+  <script>
+    // The value below is injected by flutter build, do not touch.
+    const serviceWorkerVersion = null;
+  </script>
+  <!-- This script adds the flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
   <script src="https://apis.google.com/js/platform.js" async defer></script>
+  <script>
+    window.addEventListener('load', function(ev) {
+      // Download main.dart.js
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+          });
+        }
+      });
+    });
+  </script>
 </body>
 </html>

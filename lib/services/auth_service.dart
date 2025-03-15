@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'dart:math';
 import 'credential_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -94,12 +96,145 @@ class AuthService {
     }
   }
 
+  Future<UserCredential> signInWithApple() async {
+    try {
+      debugPrint('Attempting Apple sign-in');
+
+      // Web implementation for Apple Sign-In
+      if (kIsWeb) {
+        debugPrint('Using web implementation for Apple Sign-In');
+
+        // Create an OAuthProvider for Apple
+        final provider = OAuthProvider('apple.com');
+        provider.setCustomParameters({
+          'locale': 'en', // Specify language
+          'prompt': 'consent' // Always require consent
+        });
+
+        // Sign in with popup for better user experience on web
+        debugPrint('Opening Apple sign-in popup');
+        return await _auth.signInWithPopup(provider);
+      }
+
+      // Native iOS/macOS implementation - use existing code
+      // Check if Apple Sign-In is available on this device
+      final isAvailable = await SignInWithApple.isAvailable();
+      if (!isAvailable) {
+        debugPrint('Apple Sign-In is not available on this device');
+        throw Exception('Apple Sign-In is not available on this device');
+      }
+
+      // Request credential for the Apple ID with detailed error handling
+      debugPrint('Requesting Apple ID credential...');
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      ).catchError((error) {
+        debugPrint('Detailed Apple sign-in error: $error');
+        if (error is SignInWithAppleAuthorizationException) {
+          switch (error.code) {
+            case AuthorizationErrorCode.canceled:
+              throw Exception('Apple Sign-In was canceled by the user');
+            case AuthorizationErrorCode.failed:
+              throw Exception('Apple Sign-In failed: ${error.message}');
+            case AuthorizationErrorCode.invalidResponse:
+              throw Exception('Apple Sign-In returned an invalid response');
+            case AuthorizationErrorCode.notHandled:
+              throw Exception('Apple Sign-In request was not handled');
+            case AuthorizationErrorCode.unknown:
+              throw Exception(
+                  'Apple Sign-In failed with an unknown error: ${error.message}');
+            default:
+              throw Exception('Apple Sign-In failed: ${error.message}');
+          }
+        }
+        throw Exception('Apple Sign-In failed: $error');
+      });
+
+      debugPrint('Apple ID credential obtained. Checking token...');
+
+      // Verify we have the identity token
+      if (appleCredential.identityToken == null) {
+        debugPrint('Apple identity token is null');
+        throw Exception('Could not get Apple identity token');
+      }
+
+      debugPrint('Creating OAuth credential with Apple tokens');
+      // Create an OAuthCredential
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken!,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      debugPrint('Signing in with Apple credential to Firebase');
+      // Sign in with Firebase
+      final userCredential =
+          await _auth.signInWithCredential(oauthCredential).catchError((error) {
+        debugPrint('Firebase sign-in with Apple credential failed: $error');
+        throw Exception('Firebase sign-in with Apple failed: $error');
+      });
+
+      debugPrint('Apple sign-in successful for ${userCredential.user?.email}');
+
+      // Get user email, which may be null if the user has hidden their email
+      String? email = userCredential.user?.email;
+      debugPrint('User email from credential: $email');
+
+      // Get first and last name
+      String? displayName;
+      if (appleCredential.givenName != null ||
+          appleCredential.familyName != null) {
+        displayName = [appleCredential.givenName, appleCredential.familyName]
+            .where((name) => name != null && name.isNotEmpty)
+            .join(' ');
+
+        debugPrint('Display name from Apple credential: $displayName');
+
+        // Update display name if we got it and it's not already set
+        if (displayName.isNotEmpty &&
+            (userCredential.user?.displayName == null ||
+                userCredential.user?.displayName!.isEmpty == true)) {
+          await userCredential.user?.updateDisplayName(displayName);
+          debugPrint('Updated user display name to: $displayName');
+        }
+      }
+
+      await _ensureUserDocument(userCredential);
+      if (email != null) {
+        await _credentialService.addUserAccount(
+          email,
+          null,
+          'apple',
+        );
+        debugPrint('Added Apple user account to credential service: $email');
+      } else {
+        debugPrint('Warning: No email available from Apple Sign-In');
+      }
+
+      return userCredential;
+    } on SignInWithAppleException catch (e) {
+      debugPrint('Apple sign-in exception: ${e.toString()}');
+      throw Exception('Apple sign-in failed: $e');
+    } on FirebaseAuthException catch (e) {
+      debugPrint(
+          'Firebase auth exception during Apple sign-in: ${e.code} - ${e.message}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      debugPrint('Unexpected error during Apple sign-in: $e');
+      throw Exception('Apple sign-in failed: $e');
+    }
+  }
+
   Future<void> switchAccount(String email) async {
     final accountDetails = await _credentialService.getAccountDetails(email);
     if (accountDetails == null) throw Exception('Account not found');
 
     if (accountDetails['authType'] == 'google') {
       await signInWithGoogle();
+    } else if (accountDetails['authType'] == 'apple') {
+      await signInWithApple();
     } else if (accountDetails['authType'] == 'password') {
       final password = accountDetails['password'];
       if (password == null || password.isEmpty) {
@@ -113,12 +248,19 @@ class AuthService {
     try {
       // First try to sign out from Firebase, as this is most important
       await _auth.signOut();
+      debugPrint('Successfully signed out from Firebase');
 
       // Then attempt to sign out from Google, but handle errors gracefully
       if (_auth.currentUser == null) {
         try {
-          await _googleSignIn.signOut();
-          debugPrint('Successfully signed out from Google');
+          // On web, the sign-out may fail due to localhost issues during development
+          // For native platforms, we can still try
+          if (!kIsWeb) {
+            await _googleSignIn.signOut();
+            debugPrint('Successfully signed out from Google');
+          } else {
+            debugPrint('Skipping Google sign-out on web platform');
+          }
         } catch (e) {
           // Just log the error but don't fail the whole sign-out process
           // This addresses the PlatformException on localhost development

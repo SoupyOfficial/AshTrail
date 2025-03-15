@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 import '../providers/auth_provider.dart';
@@ -113,6 +115,59 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted && _isLoading) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      await ref.read(authServiceProvider).signInWithApple();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString();
+      });
+    }
+  }
+
+  Widget _buildAppleSignInButton() {
+    if (kIsWeb) {
+      // Custom button for web platform
+      return ElevatedButton.icon(
+        icon: const Icon(Icons.apple),
+        onPressed: _isLoading ? null : _signInWithApple,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+        ),
+        label: _isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : const Text('Sign in with Apple'),
+      );
+    } else if (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      // Use the native Apple Sign-In button for iOS and macOS
+      return SignInWithAppleButton(
+        onPressed: _isLoading ? () {} : _signInWithApple,
+        style: SignInWithAppleButtonStyle.black,
+      );
+    } else {
+      // For other platforms where Apple Sign-In isn't available, return an empty container
+      return const SizedBox.shrink();
     }
   }
 
@@ -247,6 +302,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       )
                     : const Text('Login with Google'),
               ),
+
+              const SizedBox(height: 12),
+
+              // Replace the conditional Apple button with our new method
+              _buildAppleSignInButton(),
 
               const SizedBox(height: 16),
 
