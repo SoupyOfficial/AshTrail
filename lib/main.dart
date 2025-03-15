@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart'
     show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:smoke_log/services/cache_service.dart';
 import 'theme/theme_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
@@ -82,6 +83,10 @@ void main() async {
   if (!isScreenshotMode) {
     try {
       await initializeFirebase();
+
+      // Initialize the cache service
+      final cacheService = CacheService();
+      await cacheService.init();
 
       // Auto sign-in for development mode (skip for screenshot mode)
       if (kDebugMode && !isScreenshotMode && enableAutoLoginInDevMode) {
