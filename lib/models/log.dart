@@ -21,10 +21,27 @@ class Log {
     required this.potencyRating,
   }) : reason = reason ?? [];
 
-  factory Log.fromMap(Map<String, dynamic> map, String docId) {
+  // Static helper method to parse timestamps from various formats
+  static DateTime _parseTimestamp(dynamic timestamp) {
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    } else if (timestamp is DateTime) {
+      return timestamp;
+    } else if (timestamp is String) {
+      return DateTime.parse(timestamp);
+    } else if (timestamp is int) {
+      return DateTime.fromMillisecondsSinceEpoch(timestamp);
+    }
+    // Default fallback
+    return DateTime.now();
+  }
+
+  factory Log.fromMap(Map<String, dynamic> map, String? docId) {
     return Log(
       id: docId,
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
+      timestamp: map['timestamp'] != null
+          ? _parseTimestamp(map['timestamp'])
+          : DateTime.now(),
       durationSeconds: map['durationSeconds'] is String
           ? double.tryParse(map['durationSeconds']) ?? 0.0
           : (map['durationSeconds'] ?? 0.0).toDouble(),

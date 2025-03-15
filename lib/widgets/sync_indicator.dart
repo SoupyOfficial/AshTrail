@@ -82,6 +82,8 @@ class _SyncIndicatorState extends ConsumerState<SyncIndicator> {
               message: 'Sync error. Will retry automatically',
               child: Icon(Icons.sync_problem, color: Colors.red),
             );
+          case SyncStatus.noUser:
+            return const SizedBox.shrink(); // Hide when no user is logged in
         }
       },
       loading: () => const SizedBox.shrink(),

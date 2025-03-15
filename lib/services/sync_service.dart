@@ -16,6 +16,14 @@ class SyncService {
 
   SyncService(this._firestore, this.userId);
 
+  // Factory constructor for creating an empty sync service
+  factory SyncService.empty() {
+    final emptyService = SyncService(FirebaseFirestore.instance, '');
+    // Initialize with noUser status
+    emptyService._syncStatusController.add(SyncStatus.noUser);
+    return emptyService;
+  }
+
   void startPeriodicSync({Duration interval = defaultSyncInterval}) {
     // Cancel any existing timer
     stopPeriodicSync();
@@ -30,6 +38,12 @@ class SyncService {
   }
 
   Future<void> syncWithServer() async {
+    // Don't try to sync if there's no user
+    if (userId.isEmpty) {
+      _syncStatusController.add(SyncStatus.noUser);
+      return;
+    }
+
     // Notify listeners that sync started
     _syncStatusController.add(SyncStatus.syncing);
 
@@ -69,4 +83,4 @@ class SyncService {
   }
 }
 
-enum SyncStatus { syncing, synced, offline, error }
+enum SyncStatus { syncing, synced, offline, error, noUser }

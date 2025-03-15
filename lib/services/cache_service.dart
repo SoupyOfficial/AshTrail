@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/log.dart';
 
@@ -103,9 +104,24 @@ class CacheService {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Convert logs to JSON
-      final logsJson =
-          _logsCache.values.map((log) => json.encode(log.toMap())).toList();
+      // Convert logs to JSON with special handling for Timestamp objects
+      final logsJson = _logsCache.values.map((log) {
+        // Create a copy of the log data with timestamp converted to ISO string
+        final logMap = log.toMap();
+
+        // Convert Timestamp to ISO string if present
+        if (logMap['timestamp'] != null) {
+          if (logMap['timestamp'] is Timestamp) {
+            logMap['timestamp'] =
+                (logMap['timestamp'] as Timestamp).toDate().toIso8601String();
+          } else if (logMap['timestamp'] is DateTime) {
+            logMap['timestamp'] =
+                (logMap['timestamp'] as DateTime).toIso8601String();
+          }
+        }
+
+        return json.encode(logMap);
+      }).toList();
 
       // Save logs and timestamp
       await prefs.setStringList(_logsCacheKey, logsJson);
@@ -143,6 +159,12 @@ class CacheService {
         for (final logJson in logsJson) {
           try {
             final logMap = json.decode(logJson) as Map<String, dynamic>;
+
+            // Convert ISO string back to DateTime for timestamp
+            if (logMap['timestamp'] != null && logMap['timestamp'] is String) {
+              logMap['timestamp'] = DateTime.parse(logMap['timestamp']);
+            }
+
             final log = Log.fromMap(logMap, logMap['id']);
             if (log.id != null) {
               _logsCache[log.id!] = log;

@@ -3,13 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../main.dart';
 
-// Provides the initialization status of Firebase
-final firebaseInitializerProvider = FutureProvider<bool>((ref) async {
-  if (!isFirebaseInitialized && !isScreenshotMode) {
-    await initializeFirebase();
-  }
-  return isFirebaseInitialized;
-});
+// Add this provider to track Firebase initialization state
+final firebaseInitializerProvider = StateProvider<bool>((ref) => false);
 
 // Provider for Firestore instance
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {

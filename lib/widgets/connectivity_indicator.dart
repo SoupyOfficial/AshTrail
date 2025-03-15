@@ -12,6 +12,11 @@ class ConnectivityIndicator extends ConsumerWidget {
 
     return syncStatusAsync.when(
       data: (status) {
+        // Don't show any indicator when there's no user
+        if (status == SyncStatus.noUser) {
+          return const SizedBox.shrink();
+        }
+
         IconData icon;
         Color color;
         String message;
@@ -37,6 +42,9 @@ class ConnectivityIndicator extends ConsumerWidget {
             color = Colors.red;
             message = 'Sync error';
             break;
+          case SyncStatus.noUser:
+            // This case is handled above, but needed for exhaustive switch
+            return const SizedBox.shrink();
         }
 
         return Tooltip(

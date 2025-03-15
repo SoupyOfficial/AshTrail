@@ -17,39 +17,58 @@ class LogRepository {
   static const Duration cacheFreshness = Duration(hours: 12);
 
   LogRepository(this.userId) {
-    _syncService = SyncService(_firestore, userId);
-    _cacheService = CacheService(); // Get singleton instance
-    _init();
+    // Only initialize sync service if userId is not empty
+    if (userId.isNotEmpty) {
+      _syncService = SyncService(_firestore, userId);
+      _cacheService = CacheService(); // Get singleton instance
+      _init();
+    } else {
+      // Create a dummy sync service for empty userId
+      _syncService = SyncService.empty();
+      _cacheService = CacheService();
+    }
   }
 
   Future<void> _init() async {
-    if (_initialized) return;
+    if (_initialized || userId.isEmpty) return;
 
     // Initialize cache service
     await _cacheService.init();
 
-    // Start sync service
-    _syncService.startPeriodicSync();
+    // Start sync service only if userId is not empty
+    if (userId.isNotEmpty) {
+      _syncService.startPeriodicSync();
+    }
 
     _initialized = true;
   }
 
   SyncService get syncService => _syncService;
 
-  CollectionReference<Map<String, dynamic>> get _userLogsCollection {
+  CollectionReference<Map<String, dynamic>>? get _userLogsCollection {
+    // Only return the collection reference if userId is not empty
+    if (userId.isEmpty) return null;
     return _firestore.collection('users').doc(userId).collection('logs');
   }
 
   void startSyncService() {
-    if (_syncServiceStarted) return;
+    if (_syncServiceStarted || userId.isEmpty) return;
     _syncService.startPeriodicSync();
     _syncServiceStarted = true;
   }
 
   // Add log with offline support and update cache
   Future<void> addLog(Log log) async {
+    // Don't attempt to save if userId is empty
+    if (userId.isEmpty) {
+      throw Exception('Cannot add log: User not authenticated');
+    }
+
     try {
-      final docRef = await _userLogsCollection.add(log.toMap());
+      final collection = _userLogsCollection;
+      if (collection == null) return;
+
+      final docRef = await collection.add(log.toMap());
 
       // Update the log with its ID
       final logWithId = log.copyWith(id: docRef.id);
@@ -77,6 +96,11 @@ class LogRepository {
 
   // Stream logs with cache first, server update
   Stream<List<Log>> streamLogs({bool cacheOnly = false}) {
+    // If userId is empty, return empty stream
+    if (userId.isEmpty) {
+      return Stream.value([]);
+    }
+
     // Check if we have fresh cached logs first
     if (_cacheService.isLogsCacheFresh()) {
       print('Using in-memory logs cache');
@@ -102,7 +126,11 @@ class LogRepository {
 
   // Internal method to get logs from Firestore as a stream
   Stream<List<Log>> _getFirestoreLogsStream() {
-    final query = _userLogsCollection.orderBy('timestamp', descending: true);
+    if (userId.isEmpty || _userLogsCollection == null) {
+      return Stream.value([]);
+    }
+
+    final query = _userLogsCollection!.orderBy('timestamp', descending: true);
 
     return query.snapshots(includeMetadataChanges: true).map((snapshot) {
       // Check if we're getting data from cache or server
@@ -132,13 +160,18 @@ class LogRepository {
 
   // Get logs from cache first, then server if needed
   Future<List<Log>> getLogs({Source source = Source.cache}) async {
+    // If userId is empty, return empty list
+    if (userId.isEmpty) {
+      return [];
+    }
+
     // If cache is fresh and the source is cache, return from memory cache
     if (source == Source.cache && _cacheService.isLogsCacheFresh()) {
       return _cacheService.getAllLogs();
     }
 
     try {
-      final snapshot = await _userLogsCollection
+      final snapshot = await _userLogsCollection!
           .orderBy('timestamp', descending: true)
           .get(GetOptions(source: source));
 
@@ -171,11 +204,16 @@ class LogRepository {
   Future<void> updateLog(Log log) async {
     if (log.id == null) throw Exception('Log ID is null');
 
+    // Don't attempt to update if userId is empty
+    if (userId.isEmpty) {
+      throw Exception('Cannot update log: User not authenticated');
+    }
+
     // Update cache immediately for optimistic UI
     await _cacheService.addOrUpdateLog(log);
 
     try {
-      await _userLogsCollection.doc(log.id).update(log.toMap());
+      await _userLogsCollection!.doc(log.id).update(log.toMap());
       // Try to sync immediately if possible
       _syncService.syncWithServer().catchError((_) {});
     } catch (e) {
@@ -190,11 +228,16 @@ class LogRepository {
 
   // Delete with optimistic UI approach and cache update
   Future<void> deleteLog(String logId) async {
+    // Don't attempt to delete if userId is empty
+    if (userId.isEmpty) {
+      throw Exception('Cannot delete log: User not authenticated');
+    }
+
     // Remove from cache immediately for optimistic UI
     await _cacheService.removeLog(logId);
 
     try {
-      await _userLogsCollection.doc(logId).delete();
+      await _userLogsCollection!.doc(logId).delete();
       // Try to sync immediately if possible
       _syncService.syncWithServer().catchError((_) {});
     } catch (e) {
@@ -214,6 +257,11 @@ class LogRepository {
 
   // Check if we have cached data
   Future<bool> hasCachedLogs() async {
+    // If userId is empty, return false
+    if (userId.isEmpty) {
+      return false;
+    }
+
     // First check in-memory cache
     final inMemoryLogs = _cacheService.getAllLogs();
     if (inMemoryLogs.isNotEmpty && _cacheService.isLogsCacheFresh()) {
@@ -222,7 +270,7 @@ class LogRepository {
 
     // Then check Firestore cache
     try {
-      final snapshot = await _userLogsCollection
+      final snapshot = await _userLogsCollection!
           .limit(1)
           .get(const GetOptions(source: Source.cache));
       return snapshot.docs.isNotEmpty;
@@ -233,12 +281,17 @@ class LogRepository {
 
   // Batch operations for efficiency
   Future<void> batchUpdateLogs(List<Log> logs) async {
+    // Don't attempt to batch update if userId is empty
+    if (userId.isEmpty) {
+      throw Exception('Cannot batch update logs: User not authenticated');
+    }
+
     final batch = _firestore.batch();
 
     // Update cache for all logs
     for (final log in logs) {
       if (log.id == null) continue;
-      batch.update(_userLogsCollection.doc(log.id), log.toMap());
+      batch.update(_userLogsCollection!.doc(log.id), log.toMap());
       await _cacheService.addOrUpdateLog(log);
     }
 
