@@ -1,0 +1,50 @@
+# Site settings for AshTrail GitHub Pages
+title: AshTrail
+description: Documentation and support for AshTrail smoking habit tracker
+baseurl: "/smoke_log" # The subpath of your site if applicable
+url: "" # The base hostname & protocol for your site
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+
+# SASS settings
+sass:
+  style: compressed
+
+# Jekyll SEO Tag plugin settings
+author: AshTrail LLC
+twitter:
+  username: AshTrailApp
+  card: summary
+logo: /assets/logo.png
+
+# Collections for component-based architecture
+collections:
+  components:
+    output: false
+  privacy_sections:
+    output: false
+
+# Include/Exclude files and folders
+include:
+  - _pages
+  - components
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - .gitignore
+  - README.md
+
+# Default layouts
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"

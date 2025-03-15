@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AshTrail Support</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-to-content">Skip to content</a>
+    
+    <div id="page-container">
+        <!-- Header component will be loaded here -->
+        <div data-component="header"></div>
+
+        <div id="content-wrap">
+            <div class="container">
+                <!-- Anchor for skip to content -->
+                <div id="main-content"></div>
+                
+                <div class="main slide-up">
+                    <h2 class="mb-4">Contact Us</h2>
+                    <p>If you have any questions or need assistance with AshTrail, please reach out to us:</p>
+                    <ul class="mb-5">
+                        <li class="stagger-item">Email: <a href="mailto:soupsterx@gmail.com" class="link-animated">soupsterx@gmail.com</a></li>
+                        <li class="stagger-item">GitHub Issues: <a href="https://github.com/SoupyOfficial/AshTrail/issues" class="link-animated">Report an Issue</a></li>
+                    </ul>
+                    
+                    <!-- FAQ component will be loaded here -->
+                    <div data-component-url="components/faq-section.html" class="animate-on-scroll"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer component will be loaded here -->
+        <div data-component="footer"></div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script src="js/components.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+/* 
+  Main stylesheet for AshTrail GitHub Pages
+  This file will be deprecated in favor of the modular CSS approach
+  Any legacy styles should be migrated to the appropriate module
+*/
+
+/* Fix for list styling */
+ul, ol {
+  padding-left: 2rem;
+  margin-bottom: var(--spacing-lg);
+}
+
+li {
+  margin-bottom: var(--spacing-xs);
+}
+
+/* Fix for nested lists */
+ul ul, ol ol, ul ol, ol ul {
+  margin-top: var(--spacing-xs);
+  margin-bottom: 0;
+}
+
+/* Redirect to modular CSS system */
+@import 'main.css';

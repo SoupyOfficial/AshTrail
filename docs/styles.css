@@ -1,0 +1,227 @@
+/* Modern Dark Theme for AshTrail */
+:root {
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --bg-tertiary: #2d2d2d;
+  --text-primary: #f5f5f5;
+  --text-secondary: #a0a0a0;
+  --accent: #0779e4;
+  --accent-hover: #0561b9;
+  --danger: #e53935;
+  --success: #43a047;
+  --warning: #ffb300;
+  --border-radius: 8px;
+  --transition: all 0.3s ease;
+  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --container-width: 1200px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  width: 90%;
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+header {
+  background-color: var(--bg-secondary);
+  padding: 1.5rem 0;
+  border-bottom: 3px solid var(--accent);
+  box-shadow: var(--box-shadow);
+  position: relative;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+
+nav ul {
+  list-style: none;
+  display: flex;
+  margin-top: 1rem;
+}
+
+nav li {
+  margin-right: 1.5rem;
+}
+
+nav a {
+  color: var(--text-primary);
+  text-decoration: none;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: var(--transition);
+  padding: 0.5rem 0;
+  position: relative;
+}
+
+nav a:hover {
+  color: var(--accent);
+}
+
+nav a::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  background-color: var(--accent);
+  transition: var(--transition);
+}
+
+nav a:hover::after {
+  width: 100%;
+}
+
+.main {
+  background-color: var(--bg-secondary);
+  padding: 2rem;
+  margin: 2rem 0;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.main h2 {
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 0.5rem;
+  display: inline-block;
+}
+
+.main p {
+  margin-bottom: 1.5rem;
+}
+
+.main a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.main a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+.main ul {
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.main li {
+  margin-bottom: 0.5rem;
+}
+
+footer {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 1.5rem 0;
+  margin-top: 2rem;
+  font-size: 0.9rem;
+}
+
+/* Privacy Policy Specific Styling */
+.privacy-content {
+  background-color: var(--bg-secondary);
+  padding: 2rem;
+  border-radius: var(--border-radius);
+}
+
+.privacy-content h1, .privacy-content h2, .privacy-content h3 {
+  color: var(--text-primary);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.privacy-content h1 {
+  font-size: 2rem;
+  text-align: center;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.privacy-content h2 {
+  font-size: 1.5rem;
+  border-left: 4px solid var(--accent);
+  padding-left: 0.8rem;
+}
+
+.privacy-content h3 {
+  font-size: 1.2rem;
+}
+
+.privacy-content table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+}
+
+.privacy-content table td, .privacy-content table th {
+  border: 1px solid var(--bg-tertiary);
+  padding: 0.75rem;
+}
+
+.privacy-content table th {
+  background-color: var(--bg-tertiary);
+}
+
+.privacy-content a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.privacy-content a:hover {
+  text-decoration: underline;
+}
+
+.privacy-content ul, .privacy-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.privacy-content li {
+  margin-bottom: 0.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  header h1 {
+    font-size: 1.8rem;
+  }
+  
+  nav ul {
+    flex-direction: column;
+  }
+  
+  nav li {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+  
+  .main {
+    padding: 1.5rem;
+  }
+}
