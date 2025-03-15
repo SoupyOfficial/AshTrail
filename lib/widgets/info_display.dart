@@ -6,90 +6,91 @@ import '../utils/format_utils.dart';
 class InfoDisplay extends StatelessWidget {
   final List<Log> logs;
   final double? liveThcContent;
-  final double? liveBasicThcContent; // New parameter for basic THC model
+  final double? liveBasicThcContent;
 
   const InfoDisplay({
     super.key,
     required this.logs,
     this.liveThcContent,
-    this.liveBasicThcContent, // Add this parameter
+    this.liveBasicThcContent,
   });
 
   @override
   Widget build(BuildContext context) {
     final aggregates = LogAggregates.fromLogs(logs);
 
-    // Use the live value if available; otherwise, fallback to aggregates.
-    final thcValue = (liveThcContent ?? aggregates.thcContent);
-    final basicThcValue = (liveBasicThcContent ?? aggregates.thcContent);
+    // Use the live value if available; otherwise, fallback to zero
+    final thcValue = liveThcContent ?? 0.0;
+    final basicThcValue = liveBasicThcContent ?? 0.0;
 
-    // Debug print to verify the value is being passed correctly
-    // print(
-    //     'InfoDisplay rebuilding with THC value: $thcValue mg (from live provider: ${liveThcContent != null})');
-
-    // // Helper to format a Duration as HH:MM:SS.
-    // String formatDurationHHMMSS(Duration duration) {
-    //   String twoDigits(dynamic n) => n.toString().padLeft(2, '0');
-    //   String threeDigits(dynamic n) => n.toString().padLeft(3, '0');
-    //   final hours = twoDigits(duration.inHours);
-    //   final minutes = twoDigits(duration.inMinutes.remainder(60));
-    //   final seconds = twoDigits(duration.inSeconds.remainder(60));
-    //   final milliseconds = threeDigits(duration.inMilliseconds.remainder(1000));
-    //   return "$hours:$minutes:$seconds.${milliseconds}s";
-    // }
-
-    // If no last hit is available, default to a zero Duration.
+    // If no last hit is available, default to a zero Duration
     final lastHitTime = aggregates.lastHit ?? DateTime.now();
     final timeSinceLastHit = DateTime.now().difference(lastHitTime);
 
+    // Calculate duration for last 24 hours
     final now = DateTime.now();
     final cutoff = now.subtract(const Duration(hours: 24));
     final totalSecondsLast24 = logs
         .where((log) => log.timestamp.isAfter(cutoff))
         .fold<double>(0.0, (sum, log) => sum + log.durationSeconds);
 
-    return Card(
-      margin: const EdgeInsets.all(16.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Time Since Last Hit: ${formatDurationHHMMSS(timeSinceLastHit.inMilliseconds / 1000.0, detailed: true)}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Duration Today: ${aggregates.formattedTotalSecondsToday}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Duration Last 24 Hours: ${formatDurationHHMMSS(totalSecondsLast24, detailed: true)}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Raw THC Content: ${basicThcValue > 0.0001 ? "${basicThcValue.toStringAsFixed(3)} fg" : "Loading..."}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Psychoactive THC Content: ${thcValue > 0.0001 ? "${thcValue.toStringAsFixed(3)} mg" : "Loading..."}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            // const SizedBox(height: 8),
-            // Text(
-            //   'Logs available: ${logs.length}',
-            //   style: Theme.of(context).textTheme.bodySmall,
-            // ),
-            // Text(
-            //   'Duration: ${formatSecondsDisplay(log.durationSeconds)} seconds',
-            //   style: Theme.of(context).textTheme.bodyMedium,
-            // ),
-          ],
+    return Center(
+      child: Card(
+        margin: const EdgeInsets.all(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildInfoRow(
+                context: context,
+                label: 'Time Since Last Hit',
+                value: formatDurationHHMMSS(
+                    timeSinceLastHit.inMilliseconds / 1000.0,
+                    detailed: true),
+              ),
+              _buildInfoRow(
+                context: context,
+                label: 'Duration Today',
+                value: aggregates.formattedTotalSecondsToday,
+              ),
+              _buildInfoRow(
+                context: context,
+                label: 'Duration Last 24 Hours',
+                value: formatDurationHHMMSS(totalSecondsLast24, detailed: true),
+              ),
+              _buildInfoRow(
+                context: context,
+                label: 'Raw THC Content',
+                value: basicThcValue > 0.0001
+                    ? '${basicThcValue.toStringAsFixed(3)} fg'
+                    : 'Loading...',
+              ),
+              _buildInfoRow(
+                context: context,
+                label: 'Psychoactive THC Content',
+                value: thcValue > 0.0001
+                    ? '${thcValue.toStringAsFixed(3)} mg'
+                    : 'Loading...',
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required BuildContext context,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        '$label: $value',
+        style: Theme.of(context).textTheme.titleMedium,
+        textAlign: TextAlign.center,
       ),
     );
   }

@@ -63,7 +63,7 @@ class LogList extends StatelessWidget {
   /// - 9-10: Green to royal blue (best)
   Color _getRatingColor(int? rating) {
     if (rating == null || rating == -1) return Colors.grey;
-    
+
     if (rating <= 2) {
       // Map 1-2 to a gradient from black to red
       final factor = (rating - 1) / 1.0; // 0.0 to 1.0
@@ -138,7 +138,9 @@ class LogList extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 color: _getDurationColor(log.durationSeconds),
-                                fontWeight: log.durationSeconds >= 8 ? FontWeight.bold : FontWeight.normal,
+                                fontWeight: log.durationSeconds >= 8
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               )),
                         ),
                       ],
@@ -162,7 +164,9 @@ class LogList extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: _getRatingColor(log.moodRating),
-                                    fontWeight: log.moodRating! <= 2 ? FontWeight.bold : FontWeight.normal,
+                                    fontWeight: log.moodRating! <= 2
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                                   )),
                             const SizedBox(width: 10),
                             if (log.physicalRating != null)
@@ -170,7 +174,9 @@ class LogList extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: _getRatingColor(log.physicalRating),
-                                    fontWeight: log.physicalRating! <= 2 ? FontWeight.bold : FontWeight.normal,
+                                    fontWeight: log.physicalRating! <= 2
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                                   )),
                           ],
                         ),

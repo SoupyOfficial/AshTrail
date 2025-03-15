@@ -7,6 +7,7 @@ import '../services/log_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/format_utils.dart';
 import '../widgets/rating_slider.dart';
+import '../widgets/custom_app_bar.dart';
 
 class EditLogScreen extends ConsumerStatefulWidget {
   final Log log;
@@ -125,8 +126,9 @@ class _EditLogScreenState extends ConsumerState<EditLogScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Edit Log'),
+        appBar: const CustomAppBar(
+          title: 'Edit Log',
+          showBackButton: true,
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),

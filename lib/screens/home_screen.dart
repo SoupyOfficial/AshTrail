@@ -508,59 +508,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return logsAsyncValue.when(
       data: (logs) {
+        // Watch both THC content providers
+        final liveThcAsync = ref.watch(liveThcContentProvider);
+        final basicThcAsync = ref.watch(basicThcContentProvider);
+
         return SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Wrap the InfoDisplay handling in Builder to isolate rebuilds
               Builder(
                 builder: (context) {
-                  final liveThcAsync = ref.watch(liveThcContentProvider);
-                  final basicThcAsync = ref.watch(basicThcContentProvider);
-
                   return liveThcAsync.when(
-                    data: (liveThc) => basicThcAsync.when(
-                      data: (basicThc) => Column(
-                        children: [
-                          InfoDisplay(
-                            logs: logs,
-                            liveThcContent: liveThc,
-                            liveBasicThcContent: basicThc,
-                          ),
-                          const AddLogForm(),
-                        ],
-                      ),
-                      loading: () => Column(
-                        children: [
-                          InfoDisplay(logs: logs, liveThcContent: liveThc),
-                          const AddLogForm(),
-                        ],
-                      ),
-                      error: (error, stack) => Column(
-                        children: [
-                          InfoDisplay(logs: logs, liveThcContent: liveThc),
-                          Text('Basic THC Error: $error'),
-                          const AddLogForm(),
-                        ],
-                      ),
-                    ),
-                    loading: () => Column(
-                      children: [
-                        InfoDisplay(logs: logs),
-                        const SizedBox(height: 16),
-                        const CircularProgressIndicator(),
-                        const AddLogForm(),
-                      ],
-                    ),
-                    error: (error, stack) => Column(
-                      children: [
-                        InfoDisplay(logs: logs),
-                        Text('Advanced THC Error: $error'),
-                        const AddLogForm(),
-                      ],
-                    ),
+                    data: (liveThc) {
+                      return basicThcAsync.when(
+                        data: (basicThc) => InfoDisplay(
+                          logs: logs,
+                          liveThcContent: liveThc,
+                          liveBasicThcContent: basicThc,
+                        ),
+                        loading: () => InfoDisplay(
+                          logs: logs,
+                          liveThcContent: liveThc,
+                        ),
+                        error: (_, __) => InfoDisplay(
+                          logs: logs,
+                          liveThcContent: liveThc,
+                        ),
+                      );
+                    },
+                    loading: () => InfoDisplay(logs: logs),
+                    error: (_, __) => InfoDisplay(logs: logs),
                   );
                 },
               ),
+              const AddLogForm(),
             ],
           ),
         );
@@ -603,7 +585,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ];
 
     return Scaffold(
-      appBar: const CustomAppBar(),
+      appBar: CustomAppBar(
+        title: _selectedIndex == 0 ? 'Home' : 'Logs',
+      ),
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[

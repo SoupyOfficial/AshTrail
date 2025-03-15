@@ -3,20 +3,27 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../screens/login_screen.dart';
+import '../screens/settings/settings_screen.dart';
 import '../services/credential_service.dart';
 import 'theme_toggle_switch.dart';
 import 'user_switcher.dart';
 import 'sync_indicator.dart';
 
+// Provider for user accounts to prevent excessive rebuilds
+final userAccountsProvider = FutureProvider<List<Map<String, String>>>((ref) {
+  final credentialService = ref.read(credentialServiceProvider);
+  return credentialService.getUserAccounts();
+});
+
 class CustomAppBar extends ConsumerStatefulWidget
     implements PreferredSizeWidget {
-  final String? title; // Make title optional
-  final bool useIcon; // Add this flag
+  final String? title;
+  final bool showBackButton;
 
   const CustomAppBar({
     super.key,
     this.title,
-    this.useIcon = true, // Default to using icon
+    this.showBackButton = false,
   });
 
   @override
@@ -46,11 +53,6 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
     await authService.signOut();
   }
 
-  Future<List<Map<String, String>>> _getUserAccounts() async {
-    final credentialService = ref.read(credentialServiceProvider);
-    return credentialService.getUserAccounts();
-  }
-
   Future<void> _handleAccountSelection(String email) async {
     if (email == 'Add Account') {
       // Sign out then redirect to the login screen.
@@ -66,46 +68,50 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
     }
   }
 
+  void _navigateToSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final authTypeState = ref.watch(userAuthTypeProvider);
+    final accountsAsync = ref.watch(userAccountsProvider);
 
     return authState.when(
       data: (user) {
         final currentEmail = user?.email ?? 'Guest';
 
         return AppBar(
-          title: widget.useIcon
-              ? Image.asset(
-                  'assets/images/app_icon.png',
-                  height: 32, // Adjust size as needed
+          leading: widget.showBackButton
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).pop(),
                 )
-              : Text(widget.title ?? ''),
+              : IconButton(
+                  icon: const Icon(Icons.settings),
+                  onPressed: _navigateToSettings,
+                  tooltip: 'Settings',
+                ),
+          title: Text(widget.title ?? 'Smoke Log'),
           actions: [
-            // Keep only the sync indicator (removed duplicate ConnectivityIndicator)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8.0),
               child: SyncIndicator(),
             ),
-            // User account switcher
-            FutureBuilder<List<Map<String, String>>>(
-              future: _getUserAccounts(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting ||
-                    snapshot.hasError) {
-                  return const SizedBox();
-                }
-
-                final accounts = snapshot.data ?? [];
-
-                return UserSwitcher(
-                  accounts: accounts,
-                  currentEmail: currentEmail,
-                  onSwitchAccount: _handleAccountSelection,
-                  authType: authTypeState.value ?? 'none',
-                );
-              },
+            // User account switcher with improved state handling
+            accountsAsync.when(
+              data: (accounts) => UserSwitcher(
+                accounts: accounts,
+                currentEmail: currentEmail,
+                onSwitchAccount: _handleAccountSelection,
+                authType: authTypeState.value ?? 'none',
+              ),
+              loading: () => const SizedBox(width: 24),
+              error: (_, __) => const SizedBox(width: 24),
             ),
             const ThemeToggleSwitch(),
             IconButton(
@@ -115,14 +121,8 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
           ],
         );
       },
-      loading: () => AppBar(
-          title: widget.useIcon
-              ? Image.asset('assets/images/app_icon.png', height: 32)
-              : Text(widget.title ?? '')),
-      error: (_, __) => AppBar(
-          title: widget.useIcon
-              ? Image.asset('assets/images/app_icon.png', height: 32)
-              : Text(widget.title ?? '')),
+      loading: () => AppBar(title: Text(widget.title ?? 'Smoke Log')),
+      error: (_, __) => AppBar(title: Text(widget.title ?? 'Smoke Log')),
     );
   }
 }

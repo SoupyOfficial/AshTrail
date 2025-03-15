@@ -14,6 +14,9 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'utils/coordinate_finder.dart';
 
+// Flag to enable/disable auto-login in development mode
+const bool enableAutoLoginInDevMode = false;
+
 // Check if app is running in screenshot mode
 bool get isScreenshotMode {
   // Check using dart-define (works with XCUITest)
@@ -81,7 +84,7 @@ void main() async {
       await initializeFirebase();
 
       // Auto sign-in for development mode (skip for screenshot mode)
-      if (kDebugMode && !isScreenshotMode) {
+      if (kDebugMode && !isScreenshotMode && enableAutoLoginInDevMode) {
         try {
           await FirebaseAuth.instance.signInWithEmailAndPassword(
             email: 'test@test.com',
@@ -117,6 +120,7 @@ class MyApp extends StatelessWidget {
     Widget app = Consumer<ThemeProvider>(
       builder: (context, themeProvider, _) {
         return MaterialApp(
+          debugShowCheckedModeBanner: false,
           title: 'Smoke Log',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,

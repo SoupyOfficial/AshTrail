@@ -21,7 +21,7 @@ class THCConcentration {
   final double absorptionRateConstant;
   final double eliminationRateConstant;
   final double eliminationPerUnitTime;
-  List<Log> logs;
+  List<Log> _logs;
 
   THCConcentration({
     this.absorptionCoefficient = 0.25, // Default 25% absorption.
@@ -31,8 +31,13 @@ class THCConcentration {
         0.00024 / 60000, // Default elimination rate per millisecond.
     this.eliminationPerUnitTime =
         0.00333 / 60000, // Default elimination per millisecond.
-    required this.logs,
-  });
+    required List<Log> logs,
+  }) : _logs = logs;
+
+  // Add a method to update logs
+  void updateLogs(List<Log> newLogs) {
+    _logs = newLogs;
+  }
 
   /// Calculates the THC concentration at a given time [t] (in milliseconds since epoch).
   ///
@@ -41,7 +46,7 @@ class THCConcentration {
   double calculateTHCAtTime(double t) {
     double thcConcentration = 0.0;
 
-    for (Log log in logs) {
+    for (Log log in _logs) {
       double logTime = log.timestamp.millisecondsSinceEpoch.toDouble();
       // Convert duration from seconds to milliseconds.
       double logDurationInMillis = log.durationSeconds.toDouble() * 1000;
