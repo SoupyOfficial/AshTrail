@@ -23,6 +23,33 @@ class AccountOptionsScreen extends ConsumerWidget {
           // Show all accounts section
           userAccountsAsync.when(
             data: (accounts) {
+              final currentUser = FirebaseAuth.instance.currentUser;
+
+              // Add first names to accounts from Firebase user if available
+              final enrichedAccounts = accounts.map((account) {
+                final enrichedAccount = {...account};
+
+                // If this is the current account and we have displayName
+                if (currentUser?.email == account['email'] &&
+                    currentUser?.displayName != null) {
+                  final displayNameParts = currentUser!.displayName!.split(' ');
+                  if (displayNameParts.isNotEmpty) {
+                    enrichedAccount['firstName'] = displayNameParts.first;
+                  }
+                }
+                return enrichedAccount;
+              }).toList();
+
+              // Check for duplicate first names
+              final Map<String, int> firstNameCount = {};
+              for (final account in enrichedAccounts) {
+                final firstName = account['firstName'];
+                if (firstName != null && firstName.isNotEmpty) {
+                  firstNameCount[firstName] =
+                      (firstNameCount[firstName] ?? 0) + 1;
+                }
+              }
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -37,10 +64,15 @@ class AccountOptionsScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  ...accounts.map((account) {
+                  ...enrichedAccounts.map((account) {
                     final email = account['email'] ?? 'Unknown';
-                    final currentUser = FirebaseAuth.instance.currentUser;
+                    final firstName = account['firstName'] ?? '';
                     final isCurrentAccount = currentUser?.email == email;
+
+                    // Determine display name - use firstName if unique, otherwise use email
+                    final bool hasUniqueName = firstName.isNotEmpty &&
+                        (firstNameCount[firstName] == 1);
+                    final displayName = hasUniqueName ? firstName : email;
 
                     return ListTile(
                       leading: CircleAvatar(
@@ -50,11 +82,11 @@ class AccountOptionsScreen extends ConsumerWidget {
                           color: isCurrentAccount ? Colors.white : null,
                         ),
                       ),
-                      title: Text(email),
+                      title: Text(displayName),
                       subtitle: isCurrentAccount
                           ? const Text('Current Account',
                               style: TextStyle(color: Colors.green))
-                          : null,
+                          : (hasUniqueName ? Text(email) : null),
                       trailing: isCurrentAccount
                           ? null
                           : IconButton(
@@ -107,8 +139,8 @@ class AccountOptionsScreen extends ConsumerWidget {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         SnackBar(
-                                            content:
-                                                Text('Switched to $email')),
+                                            content: Text(
+                                                'Switched to $displayName')),
                                       );
                                       // Refresh the page
                                       ref.refresh(userAccountsProvider);

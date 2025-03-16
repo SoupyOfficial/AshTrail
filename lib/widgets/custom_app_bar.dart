@@ -158,12 +158,44 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
             ),
             // User account switcher with improved state handling
             accountsAsync.when(
-              data: (accounts) => UserSwitcher(
-                accounts: accounts,
-                currentEmail: currentEmail,
-                onSwitchAccount: _handleAccountSelection,
-                authType: authTypeState.value ?? 'none',
-              ),
+              data: (accounts) {
+                debugPrint(
+                    'CustomAppBar: Current Firebase user - email: ${user?.email}, displayName: ${user?.displayName}');
+
+                final enrichedAccounts = accounts.map((account) {
+                  // Fetch first name from user profile if available
+                  final Map<String, String> enrichedAccount = {...account};
+
+                  // Try to get the displayName from auth and extract first name
+                  if (user?.email == account['email'] &&
+                      user?.displayName != null) {
+                    final displayNameParts = user!.displayName!.split(' ');
+                    if (displayNameParts.isNotEmpty) {
+                      enrichedAccount['firstName'] = displayNameParts.first;
+                      debugPrint(
+                          'Enriched account ${account['email']} with firstName=${displayNameParts.first}');
+                    } else {
+                      debugPrint(
+                          'DisplayName present but no parts: ${user.displayName}');
+                    }
+                  } else {
+                    debugPrint(
+                        'Could not enrich account ${account['email']}: userEmail=${user?.email}, hasDisplayName=${user?.displayName != null}');
+                  }
+
+                  return enrichedAccount;
+                }).toList();
+
+                debugPrint(
+                    'CustomAppBar: Enriched accounts: ${enrichedAccounts.map((a) => "${a['email']}: firstName=${a['firstName']}").join(', ')}');
+
+                return UserSwitcher(
+                  accounts: enrichedAccounts,
+                  currentEmail: currentEmail,
+                  onSwitchAccount: _handleAccountSelection,
+                  authType: authTypeState.value ?? 'none',
+                );
+              },
               loading: () => const SizedBox(width: 24),
               error: (_, __) => const SizedBox(width: 24),
             ),

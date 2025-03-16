@@ -17,6 +17,11 @@ class UserSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug print entire accounts list
+    debugPrint(
+        'UserSwitcher accounts: ${accounts.map((a) => "${a['email']}: firstName=${a['firstName']}").join(', ')}');
+    debugPrint('UserSwitcher currentEmail: $currentEmail');
+
     // Make sure we have accounts to show
     if (accounts.isEmpty) {
       return const SizedBox(); // Don't show anything if no accounts
@@ -31,7 +36,20 @@ class UserSwitcher extends StatelessWidget {
     final displayAccounts = [...accounts];
     if (!currentEmailInAccounts && currentEmail != 'Guest') {
       displayAccounts.add({'email': currentEmail, 'authType': authType});
+      debugPrint('Added missing account: $currentEmail');
     }
+
+    // Check for duplicate first names
+    final Map<String, int> firstNameCount = {};
+    for (final account in displayAccounts) {
+      final firstName = account['firstName'];
+      if (firstName != null && firstName.isNotEmpty) {
+        firstNameCount[firstName] = (firstNameCount[firstName] ?? 0) + 1;
+      }
+    }
+
+    // Debug print the firstName counts
+    debugPrint('firstNameCount: $firstNameCount');
 
     // Ensure interactive hit area is large enough
     return Padding(
@@ -45,9 +63,21 @@ class UserSwitcher extends StatelessWidget {
           final List<PopupMenuEntry<String>> menuItems = [
             ...displayAccounts.map((account) {
               final email = account['email'] ?? '';
+              final firstName = account['firstName'] ?? '';
               final accountAuthType = account['authType'] ?? 'password';
               final isCurrentUser = email == currentEmail;
               final icon = isCurrentUser ? Icons.check : null;
+
+              // Determine display name - use firstName if unique, otherwise use email
+              final bool hasUniqueName =
+                  firstName.isNotEmpty && (firstNameCount[firstName] == 1);
+              final displayName = hasUniqueName ? firstName : email;
+
+              // Debug for current user
+              if (isCurrentUser) {
+                debugPrint(
+                    'CURRENT USER: email=$email, firstName=$firstName, hasUniqueName=$hasUniqueName, displayName=$displayName');
+              }
 
               return PopupMenuItem<String>(
                 value: email,
@@ -59,7 +89,7 @@ class UserSwitcher extends StatelessWidget {
                     ] else
                       const SizedBox(width: 26), // Maintain consistent spacing
                     Expanded(
-                      child: Text(email, overflow: TextOverflow.ellipsis),
+                      child: Text(displayName, overflow: TextOverflow.ellipsis),
                     ),
                     const SizedBox(width: 8),
                     Icon(
@@ -89,7 +119,7 @@ class UserSwitcher extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              currentEmail,
+              _getDisplayName(displayAccounts, currentEmail, firstNameCount),
               style: const TextStyle(
                 fontSize: 14,
                 overflow: TextOverflow.ellipsis,
@@ -100,6 +130,30 @@ class UserSwitcher extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _getDisplayName(List<Map<String, String>> accounts,
+      String currentEmail, Map<String, int> firstNameCounts) {
+    // Find current user account
+    final currentAccount = accounts.firstWhere(
+      (account) => account['email'] == currentEmail,
+      orElse: () => {'email': currentEmail},
+    );
+
+    final firstName = currentAccount['firstName'] ?? '';
+
+    // Debug the retrieved firstName for current account
+    debugPrint(
+        '_getDisplayName: email=$currentEmail, firstName=$firstName, hasUnique=${firstName.isNotEmpty && (firstNameCounts[firstName] == 1)}');
+
+    // Use first name if it's available and unique, otherwise use email
+    if (firstName.isNotEmpty && (firstNameCounts[firstName] == 1)) {
+      debugPrint('RETURNING FIRST NAME: $firstName');
+      return firstName;
+    }
+
+    debugPrint('RETURNING EMAIL: $currentEmail');
+    return currentEmail;
   }
 
   IconData _getAuthIcon(String authType) {

@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class CredentialService {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -110,11 +112,13 @@ class CredentialService {
   // Get all saved user accounts
   Future<List<Map<String, String>>> getUserAccounts() async {
     final accountsJson = await _secureStorage.read(key: _userAccountsKey);
+    debugPrint(
+        'CredentialService.getUserAccounts: raw JSON: ${accountsJson?.substring(0, min(100, accountsJson?.length ?? 0))}...');
     if (accountsJson == null) return [];
 
     try {
       final List<dynamic> decoded = jsonDecode(accountsJson);
-      return decoded
+      final result = decoded
           .map((account) => {
                 'userId': (account['userId'] ?? '').toString(),
                 'email': (account['email'] ?? '').toString(),
@@ -123,10 +127,23 @@ class CredentialService {
                 // Include password if it exists
                 if (account['password'] != null)
                   'password': account['password'].toString(),
+                // Extract firstName from displayName if available
+                if ((account['displayName'] ?? '').toString().isNotEmpty)
+                  'firstName': (account['displayName'] ?? '')
+                      .toString()
+                      .split(' ')
+                      .first,
               })
           .toList();
+
+      debugPrint(
+          'CredentialService.getUserAccounts: found ${result.length} accounts');
+      debugPrint(
+          'CredentialService.getUserAccounts: account details: ${result.map((a) => "${a['email']}: displayName=${a['displayName']}, firstName=${a['firstName']}").join(', ')}');
+
+      return result;
     } catch (e) {
-      print('Error parsing user accounts: $e');
+      debugPrint('Error parsing user accounts: $e');
       return [];
     }
   }

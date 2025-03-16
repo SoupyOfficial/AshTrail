@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../services/credential_service.dart';
 import '../widgets/custom_app_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UserAccountSelector extends ConsumerWidget {
   final String currentEmail;
@@ -17,6 +18,7 @@ class UserAccountSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(userAccountsProvider);
+    final currentUser = FirebaseAuth.instance.currentUser;
 
     return accountsAsync.when(
       data: (accounts) {
@@ -25,7 +27,28 @@ class UserAccountSelector extends ConsumerWidget {
             .where((account) => account['email'] != currentEmail)
             .toList();
 
-        if (otherAccounts.isEmpty) {
+        // Add first names to accounts using Firebase user displayName
+        final enrichedAccounts = otherAccounts.map((account) {
+          final enrichedAccount = {...account};
+          if (currentUser?.displayName != null) {
+            final displayNameParts = currentUser!.displayName!.split(' ');
+            if (displayNameParts.isNotEmpty) {
+              enrichedAccount['firstName'] = displayNameParts.first;
+            }
+          }
+          return enrichedAccount;
+        }).toList();
+
+        // Check for duplicate first names
+        final Map<String, int> firstNameCount = {};
+        for (final account in enrichedAccounts) {
+          final firstName = account['firstName'];
+          if (firstName != null && firstName.isNotEmpty) {
+            firstNameCount[firstName] = (firstNameCount[firstName] ?? 0) + 1;
+          }
+        }
+
+        if (enrichedAccounts.isEmpty) {
           return const Card(
             margin: EdgeInsets.all(16.0),
             child: Padding(
@@ -57,15 +80,24 @@ class UserAccountSelector extends ConsumerWidget {
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: otherAccounts.length,
+                itemCount: enrichedAccounts.length,
                 itemBuilder: (context, index) {
-                  final account = otherAccounts[index];
+                  final account = enrichedAccounts[index];
+                  final email = account['email'] ?? 'Unknown';
+                  final firstName = account['firstName'] ?? '';
+
+                  // Determine display name - use firstName if unique, otherwise use email
+                  final bool hasUniqueName =
+                      firstName.isNotEmpty && (firstNameCount[firstName] == 1);
+                  final displayName = hasUniqueName ? firstName : email;
+
                   return ListTile(
                     leading: const CircleAvatar(
                       child: Icon(Icons.person),
                     ),
-                    title: Text(account['email'] ?? 'Unknown'),
-                    onTap: () => onUserSelected(account['email'] ?? ''),
+                    title: Text(displayName),
+                    subtitle: hasUniqueName ? Text(email) : null,
+                    onTap: () => onUserSelected(email),
                   );
                 },
               ),

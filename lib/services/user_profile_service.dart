@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_profile.dart';
 
 class UserProfileService {
@@ -51,8 +52,14 @@ class UserProfileService {
           : '';
       final displayName = profile.firstName + lastName;
 
+      debugPrint(
+          'Updating user displayName from "${user.displayName}" to "$displayName"');
+
       if (user.displayName != displayName) {
         await user.updateDisplayName(displayName);
+        debugPrint('DisplayName updated successfully');
+      } else {
+        debugPrint('DisplayName already matches, no update needed');
       }
     }
 
