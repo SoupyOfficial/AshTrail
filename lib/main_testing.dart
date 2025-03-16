@@ -14,7 +14,7 @@ class TestingApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Smoke Log',
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.darkTheme(Colors.blue), // Use a default theme
       home: const HomeScreen(), // Directly show home screen for testing
     );
   }

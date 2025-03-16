@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart' as provider;
+import 'package:smoke_log/screens/settings/accent_color_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../theme/theme_provider.dart';
 import 'personal_info_screen.dart';
@@ -105,6 +106,35 @@ class SettingsScreen extends ConsumerWidget {
                   );
                 },
               ),
+
+              // Add accent color option
+              provider.Consumer<ThemeProvider>(
+                builder: (context, themeProvider, _) {
+                  return ListTile(
+                    leading: const Icon(Icons.color_lens),
+                    title: const Text('Accent Color'),
+                    subtitle: const Text('Customize app colors'),
+                    trailing: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: themeProvider.accentColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AccentColorScreen(),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.info_outline),
@@ -125,8 +155,8 @@ class SettingsScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error:
-            (error, _) => Center(child: Text('Error loading profile: $error')),
+        error: (error, _) =>
+            Center(child: Text('Error loading profile: $error')),
       ),
     );
   }

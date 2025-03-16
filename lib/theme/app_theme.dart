@@ -1,33 +1,36 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme {
+  static ThemeData lightTheme(Color accentColor) {
     return ThemeData(
       brightness: Brightness.light,
-      primaryColor: Colors.blue,
+      primaryColor: accentColor,
       scaffoldBackgroundColor: Colors.white,
-      colorScheme: const ColorScheme.light(
-        primary: Colors.blue,
-        secondary: Colors.blueAccent,
+      colorScheme: ColorScheme.light(
+        primary: accentColor,
+        secondary: accentColor.withOpacity(0.8),
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.blue,
+      appBarTheme: AppBarTheme(
+        backgroundColor: accentColor,
       ),
       cardTheme: CardTheme(
         color: Colors.white,
         shadowColor: Colors.grey[300],
       ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: accentColor,
+      ),
     );
   }
 
-  static ThemeData get darkTheme {
+  static ThemeData darkTheme(Color accentColor) {
     return ThemeData(
       brightness: Brightness.dark,
-      primaryColor: Colors.blueGrey[700],
+      primaryColor: accentColor,
       scaffoldBackgroundColor: Colors.grey[900],
       colorScheme: ColorScheme.dark(
-        primary: Colors.blueGrey[400]!,
-        secondary: Colors.blue[300]!,
+        primary: accentColor,
+        secondary: accentColor.withOpacity(0.8),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.grey[800],
@@ -36,6 +39,13 @@ class AppTheme {
         color: Colors.grey[800],
         shadowColor: Colors.black45,
       ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: accentColor,
+      ),
     );
   }
+
+  // Legacy getters for backward compatibility
+  static ThemeData get defaultLightTheme => AppTheme.lightTheme(Colors.blue);
+  static ThemeData get defaultDarkTheme => AppTheme.darkTheme(Colors.blue);
 }

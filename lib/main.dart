@@ -127,8 +127,8 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Smoke Log',
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
+          theme: AppTheme.lightTheme(themeProvider.accentColor),
+          darkTheme: AppTheme.darkTheme(themeProvider.accentColor),
           themeMode: themeProvider.themeMode,
           key: ValueKey(themeProvider.themeMode),
           navigatorKey: GlobalNavigatorKey.navigatorKey,
