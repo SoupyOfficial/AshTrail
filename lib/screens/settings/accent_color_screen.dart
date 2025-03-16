@@ -52,9 +52,11 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
     final isDark = themeProvider.isDarkMode;
 
     return Scaffold(
-      appBar: const CustomAppBar(
+      appBar: CustomAppBar(
         title: 'Accent Color',
         showBackButton: true,
+        backgroundColor:
+            pickerColor, // Use the current picker color for real-time preview
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -108,6 +110,27 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
                           ),
                         ),
                       ],
+                    ),
+
+                    // Add app bar preview
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: pickerColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'App Bar Preview',
+                        style: TextStyle(
+                          color: _contrastingColor(pickerColor),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -231,12 +254,16 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
 
               const SizedBox(height: 16),
 
-              // Reset to default button
+              // Reset to default button - update to show when using default color
               Center(
                 child: TextButton.icon(
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Reset to Default Blue'),
-                  onPressed: resetToDefaultBlue,
+                  label: Text(pickerColor == Colors.blue
+                      ? 'Using Default Blue'
+                      : 'Reset to Default Blue'),
+                  onPressed: pickerColor == Colors.blue
+                      ? null // Disable button if already using default blue
+                      : resetToDefaultBlue,
                 ),
               ),
 

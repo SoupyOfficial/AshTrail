@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as provider_pkg;
 import '../providers/auth_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../services/credential_service.dart';
+import '../theme/theme_provider.dart';
 import 'user_switcher.dart';
 import 'sync_indicator.dart';
 
@@ -12,11 +14,13 @@ class CustomAppBar extends ConsumerStatefulWidget
     implements PreferredSizeWidget {
   final String? title;
   final bool showBackButton;
+  final Color? backgroundColor; // Add parameter for custom background color
 
   const CustomAppBar({
     super.key,
     this.title,
     this.showBackButton = false,
+    this.backgroundColor, // Allow custom background color to be passed
   });
 
   @override
@@ -126,11 +130,16 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
     final authTypeState = ref.watch(userAuthTypeProvider);
     final accountsAsync = ref.watch(userAccountsProvider);
 
+    // Get the accent color from ThemeProvider
+    final themeProvider = provider_pkg.Provider.of<ThemeProvider>(context);
+    final accentColor = widget.backgroundColor ?? themeProvider.accentColor;
+
     return authState.when(
       data: (user) {
         final currentEmail = user?.email ?? 'Guest';
 
         return AppBar(
+          backgroundColor: accentColor, // Use the accent color or custom color
           leading: widget.showBackButton
               ? IconButton(
                   icon: const Icon(Icons.arrow_back),
@@ -162,8 +171,14 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
           ],
         );
       },
-      loading: () => AppBar(title: Text(widget.title ?? 'Smoke Log')),
-      error: (_, __) => AppBar(title: Text(widget.title ?? 'Smoke Log')),
+      loading: () => AppBar(
+        title: Text(widget.title ?? 'Smoke Log'),
+        backgroundColor: accentColor, // Use accent color here too
+      ),
+      error: (_, __) => AppBar(
+        title: Text(widget.title ?? 'Smoke Log'),
+        backgroundColor: accentColor, // And here
+      ),
     );
   }
 }

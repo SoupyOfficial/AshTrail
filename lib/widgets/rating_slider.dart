@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../theme/theme_provider.dart';
 
 class RatingSlider extends StatelessWidget {
   final String label;
@@ -22,6 +24,10 @@ class RatingSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get the accent color from theme provider if no explicit color is provided
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final effectiveActiveColor = activeColor ?? themeProvider.accentColor;
+
     return Column(
       children: [
         Center(
@@ -43,7 +49,7 @@ class RatingSlider extends StatelessWidget {
             max: max.toDouble(),
             divisions: divisions,
             label: '$value',
-            activeColor: activeColor ?? Theme.of(context).primaryColor,
+            activeColor: effectiveActiveColor,
             onChanged: (newValue) => onChanged(newValue.toInt()),
           ),
         ),

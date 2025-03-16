@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as provider_pkg;
 import '../models/log.dart';
 import '../providers/log_providers.dart';
 import '../providers/dropdown_options_provider.dart';
 import '../models/reason_option.dart';
-import 'rating_slider.dart'; // add this import
+import '../theme/theme_provider.dart';
+import 'rating_slider.dart';
 import '../utils/format_utils.dart';
 
 class AddLogForm extends ConsumerStatefulWidget {
@@ -132,6 +134,9 @@ class _AddLogFormState extends ConsumerState<AddLogForm> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = provider_pkg.Provider.of<ThemeProvider>(context);
+    final accentColor = themeProvider.accentColor;
+
     return Card(
       margin: const EdgeInsets.all(16.0),
       child: Padding(
@@ -154,7 +159,9 @@ class _AddLogFormState extends ConsumerState<AddLogForm> {
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _startTime != null ? Colors.red : Colors.blue,
+                  color: _startTime != null
+                      ? Colors.red
+                      : accentColor, // Use accent color
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.2),
@@ -194,7 +201,9 @@ class _AddLogFormState extends ConsumerState<AddLogForm> {
                         _moodRating = val;
                       });
                     },
-                    activeColor: _moodRating == -1 ? Colors.grey : Colors.blue,
+                    activeColor: _moodRating == -1
+                        ? Colors.grey
+                        : accentColor, // Use accent color
                   ),
                 ),
                 IconButton(
@@ -219,8 +228,9 @@ class _AddLogFormState extends ConsumerState<AddLogForm> {
                         _physicalRating = val;
                       });
                     },
-                    activeColor:
-                        _physicalRating == -1 ? Colors.grey : Colors.blue,
+                    activeColor: _physicalRating == -1
+                        ? Colors.grey
+                        : accentColor, // Use accent color
                   ),
                 ),
                 IconButton(
