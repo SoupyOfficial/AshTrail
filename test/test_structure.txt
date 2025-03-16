@@ -1,0 +1,13 @@
+/test
+├── unit/
+│   ├── providers/       # Tests for providers like auth_provider
+│   ├── services/        # Tests for services
+│   └── models/          # Tests for data models
+├── integration/
+│   ├── database/        # Focus on database interactions
+│   └── auth/            # Authentication flow tests
+├── widget/              # UI component tests
+├── mocks/               # Mock implementations
+├── fixtures/            # Test data files
+└── helpers/             # Reusable test utilities
+```
