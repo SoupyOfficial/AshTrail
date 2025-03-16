@@ -23,7 +23,10 @@ final logRepositoryProvider = Provider<LogRepository>((ref) {
     loading: () => LogRepository(''),
     error: (_, __) => LogRepository(''),
   );
-});
+}, dependencies: [
+  firebaseInitializerProvider,
+  authStateProvider
+]); // Declare dependencies
 
 // Stream of logs with better error handling
 final logsStreamProvider = StreamProvider<List<Log>>((ref) {

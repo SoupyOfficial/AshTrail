@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../services/credential_service.dart';
 import '../widgets/custom_app_bar.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class UserAccountSelector extends ConsumerWidget {
   final String currentEmail;
@@ -18,7 +17,8 @@ class UserAccountSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(userAccountsProvider);
-    final currentUser = FirebaseAuth.instance.currentUser;
+    // Use the provider instead of direct Firebase access
+    final currentUserAsync = ref.watch(authStateProvider);
 
     return accountsAsync.when(
       data: (accounts) {
@@ -27,11 +27,13 @@ class UserAccountSelector extends ConsumerWidget {
             .where((account) => account['email'] != currentEmail)
             .toList();
 
-        // Add first names to accounts using Firebase user displayName
+        // Add first names to accounts using user displayName from the provider
         final enrichedAccounts = otherAccounts.map((account) {
           final enrichedAccount = {...account};
-          if (currentUser?.displayName != null) {
-            final displayNameParts = currentUser!.displayName!.split(' ');
+          // Check if we have a current user and access via the provider
+          if (currentUserAsync.value?.displayName != null) {
+            final displayNameParts =
+                currentUserAsync.value!.displayName!.split(' ');
             if (displayNameParts.isNotEmpty) {
               enrichedAccount['firstName'] = displayNameParts.first;
             }

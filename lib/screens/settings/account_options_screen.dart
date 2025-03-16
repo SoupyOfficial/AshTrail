@@ -12,6 +12,9 @@ class AccountOptionsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAccountsAsync = ref.watch(userAccountsProvider);
+    // Use the provider instead of direct Firebase access
+    final currentUserAsync = ref.watch(authStateProvider);
+    final currentUser = currentUserAsync.value;
 
     return Scaffold(
       appBar: const CustomAppBar(
@@ -23,9 +26,7 @@ class AccountOptionsScreen extends ConsumerWidget {
           // Show all accounts section
           userAccountsAsync.when(
             data: (accounts) {
-              final currentUser = FirebaseAuth.instance.currentUser;
-
-              // Add first names to accounts from Firebase user if available
+              // Add first names to accounts from user provider if available
               final enrichedAccounts = accounts.map((account) {
                 final enrichedAccount = {...account};
 
