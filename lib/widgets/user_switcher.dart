@@ -17,6 +17,22 @@ class UserSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Make sure we have accounts to show
+    if (accounts.isEmpty) {
+      return const SizedBox(); // Don't show anything if no accounts
+    }
+
+    // Check if current email is in the accounts list
+    final bool currentEmailInAccounts = accounts.any(
+      (account) => account['email'] == currentEmail,
+    );
+
+    // If current user isn't in the list but we have their email, create a temporary entry
+    final displayAccounts = [...accounts];
+    if (!currentEmailInAccounts && currentEmail != 'Guest') {
+      displayAccounts.add({'email': currentEmail, 'authType': authType});
+    }
+
     // Ensure interactive hit area is large enough
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -27,7 +43,7 @@ class UserSwitcher extends StatelessWidget {
         onSelected: onSwitchAccount,
         itemBuilder: (context) {
           final List<PopupMenuEntry<String>> menuItems = [
-            ...accounts.map((account) {
+            ...displayAccounts.map((account) {
               final email = account['email'] ?? '';
               final accountAuthType = account['authType'] ?? 'password';
               final isCurrentUser = email == currentEmail;
@@ -43,16 +59,11 @@ class UserSwitcher extends StatelessWidget {
                     ] else
                       const SizedBox(width: 26), // Maintain consistent spacing
                     Expanded(
-                      child: Text(
-                        email,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      child: Text(email, overflow: TextOverflow.ellipsis),
                     ),
                     const SizedBox(width: 8),
                     Icon(
-                      accountAuthType == 'google'
-                          ? FontAwesomeIcons.google
-                          : Icons.email,
+                      _getAuthIcon(accountAuthType),
                       size: 16,
                       color: Colors.grey,
                     ),
@@ -79,7 +90,7 @@ class UserSwitcher extends StatelessWidget {
           children: [
             Text(
               currentEmail,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -89,5 +100,17 @@ class UserSwitcher extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  IconData _getAuthIcon(String authType) {
+    switch (authType) {
+      case 'google':
+        return FontAwesomeIcons.google;
+      case 'apple':
+        return FontAwesomeIcons.apple;
+      case 'password':
+      default:
+        return Icons.email;
+    }
   }
 }

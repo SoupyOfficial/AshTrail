@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import '../models/log.dart';
 import 'sync_service.dart';
 import 'cache_service.dart';
@@ -304,6 +305,51 @@ class LogRepository {
   // Cleanup resources
   void dispose() {
     _syncService.dispose();
+  }
+
+  Future<bool> transferLogToUser(String logId, String targetUserId) async {
+    if (userId.isEmpty || targetUserId.isEmpty || logId.isEmpty) {
+      return false;
+    }
+
+    try {
+      // Get the log document
+      final logDoc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('logs')
+          .doc(logId)
+          .get();
+
+      if (!logDoc.exists) {
+        return false;
+      }
+
+      // Create a new log in the target user's collection
+      final logData = logDoc.data()!;
+      await _firestore
+          .collection('users')
+          .doc(targetUserId)
+          .collection('logs')
+          .doc(logId)
+          .set(logData);
+
+      // Delete the log from the current user's collection
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('logs')
+          .doc(logId)
+          .delete();
+
+      // Force sync to ensure changes propagate
+      await syncService.syncWithServer();
+
+      return true;
+    } catch (e) {
+      debugPrint('Error transferring log: $e');
+      return false;
+    }
   }
 }
 

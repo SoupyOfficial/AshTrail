@@ -34,9 +34,37 @@ final authStateProvider = StreamProvider<User?>((ref) {
 final userAuthTypeProvider = StreamProvider<String>((ref) {
   return ref.watch(firebaseAuthProvider).authStateChanges().map((user) {
     if (user == null) return 'none';
-    // Check if the user's providers list contains Google
-    final isGoogleUser = user.providerData
-        .any((provider) => provider.providerId == 'google.com');
-    return isGoogleUser ? 'google' : 'password';
+
+    // Check if the user's providers list contains Google or Apple
+    final isGoogleUser = user.providerData.any(
+      (provider) => provider.providerId == 'google.com',
+    );
+    if (isGoogleUser) return 'google';
+
+    final isAppleUser = user.providerData.any(
+      (provider) => provider.providerId == 'apple.com',
+    );
+    if (isAppleUser) return 'apple';
+
+    return 'password';
   });
+});
+
+// Update to include auto-refresh and de-duplication when auth state changes
+final userAccountsProvider =
+    FutureProvider.autoDispose<List<Map<String, String>>>((ref) async {
+  // Watch the auth state to refresh when the user changes
+  final authState = ref.watch(authStateProvider);
+  final credentialService = ref.read(credentialServiceProvider);
+
+  // Clean up any duplicate accounts
+  await credentialService.cleanupDuplicateAccounts();
+
+  // If we have a user, make sure they're saved
+  if (authState.value != null) {
+    // Save the current user to ensure they're in the account list
+    await credentialService.saveUserAccount(authState.value!);
+  }
+
+  return await credentialService.getUserAccounts();
 });

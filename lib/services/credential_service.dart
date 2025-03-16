@@ -1,40 +1,210 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CredentialService {
-  static const _accountsKey = 'user_accounts';
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  static const String _userAccountsKey = 'user_accounts';
+  static const String _activeUserKey = 'active_user';
+  static const String _tokenPrefix = 'auth_token_';
 
-  Future<List<Map<String, String>>> getUserAccounts() async {
-    final accountsJson = await _storage.read(key: _accountsKey);
-    if (accountsJson != null) {
-      final List<dynamic> accountsDynamic = jsonDecode(accountsJson);
-      return accountsDynamic
-          .map<Map<String, String>>((item) => Map<String, String>.from(item))
-          .toList();
+  // Get currently active user ID
+  Future<String?> getActiveUserId() async {
+    return await _secureStorage.read(key: _activeUserKey);
+  }
+
+  // Set the active user
+  Future<void> setActiveUser(String userId) async {
+    await _secureStorage.write(key: _activeUserKey, value: userId);
+  }
+
+  // Save a user account without removing existing ones
+  Future<void> saveUserAccount(User user,
+      {String? password, String? authType}) async {
+    // Get existing accounts
+    final accounts = await getUserAccounts();
+
+    // Check if this account already exists by userId or email
+    final existingIndexById =
+        accounts.indexWhere((account) => account['userId'] == user.uid);
+    final existingIndexByEmail =
+        accounts.indexWhere((account) => account['email'] == user.email);
+
+    // Determine if we have an existing account and which index to use
+    final hasExistingAccount =
+        existingIndexById >= 0 || existingIndexByEmail >= 0;
+    final indexToUpdate =
+        existingIndexById >= 0 ? existingIndexById : existingIndexByEmail;
+
+    final Map<String, String> accountData = {
+      'userId': user.uid,
+      'email': user.email ?? '',
+      'displayName': user.displayName ?? '',
+      'authType': authType ?? _determineAuthType(user),
+    };
+
+    // Only include password if provided and not empty
+    if (password != null && password.isNotEmpty) {
+      accountData['password'] = password;
     }
-    return [];
+
+    if (hasExistingAccount) {
+      // Update existing account but preserve password if not provided
+      if (password == null && accounts[indexToUpdate].containsKey('password')) {
+        accountData['password'] = accounts[indexToUpdate]['password']!;
+      }
+
+      // Remove any potential duplicate by email if we're updating by userId
+      if (existingIndexById >= 0 &&
+          existingIndexByEmail >= 0 &&
+          existingIndexById != existingIndexByEmail) {
+        // We have two entries - one by ID and one by email, remove the email one
+        accounts.removeAt(existingIndexByEmail);
+      }
+
+      accounts[indexToUpdate] = accountData;
+    } else {
+      // Add as new account
+      accounts.add(accountData);
+    }
+
+    // Save back to secure storage
+    await _secureStorage.write(
+        key: _userAccountsKey, value: jsonEncode(accounts));
+
+    // Save the auth tokens if available
+    await _saveUserToken(user);
+
+    // Set as active user
+    await setActiveUser(user.uid);
+  }
+
+  // Helper to determine auth type from user object
+  String _determineAuthType(User user) {
+    if (user.providerData
+        .any((provider) => provider.providerId == 'google.com')) {
+      return 'google';
+    } else if (user.providerData
+        .any((provider) => provider.providerId == 'apple.com')) {
+      return 'apple';
+    } else {
+      return 'password';
+    }
+  }
+
+  // Store auth token for a user
+  Future<void> _saveUserToken(User user) async {
+    try {
+      final token = await user.getIdToken(true);
+      await _secureStorage.write(key: _tokenPrefix + user.uid, value: token);
+    } catch (e) {
+      print('Failed to save user token: $e');
+    }
+  }
+
+  // Get token for a user
+  Future<String?> getUserToken(String userId) async {
+    return await _secureStorage.read(key: _tokenPrefix + userId);
+  }
+
+  // Get all saved user accounts
+  Future<List<Map<String, String>>> getUserAccounts() async {
+    final accountsJson = await _secureStorage.read(key: _userAccountsKey);
+    if (accountsJson == null) return [];
+
+    try {
+      final List<dynamic> decoded = jsonDecode(accountsJson);
+      return decoded
+          .map((account) => {
+                'userId': (account['userId'] ?? '').toString(),
+                'email': (account['email'] ?? '').toString(),
+                'displayName': (account['displayName'] ?? '').toString(),
+                'authType': (account['authType'] ?? 'password').toString(),
+                // Include password if it exists
+                if (account['password'] != null)
+                  'password': account['password'].toString(),
+              })
+          .toList();
+    } catch (e) {
+      print('Error parsing user accounts: $e');
+      return [];
+    }
+  }
+
+  // Remove a specific user account
+  Future<void> removeUserAccount(String userId) async {
+    // Remove from accounts list
+    final accounts = await getUserAccounts();
+    final updatedAccounts =
+        accounts.where((account) => account['userId'] != userId).toList();
+
+    await _secureStorage.write(
+        key: _userAccountsKey, value: jsonEncode(updatedAccounts));
+
+    // Remove stored token
+    await _secureStorage.delete(key: _tokenPrefix + userId);
+
+    // If we removed the active user, set a new active user if available
+    final currentActiveId = await getActiveUserId();
+    if (currentActiveId == userId && updatedAccounts.isNotEmpty) {
+      await setActiveUser(updatedAccounts[0]['userId']!);
+    }
   }
 
   Future<void> addUserAccount(
       String email, String? password, String authType) async {
     final accounts = await getUserAccounts();
-    // Update if account exists, otherwise add new
+
+    // Check if account exists by email
     final existingIndex =
         accounts.indexWhere((account) => account['email'] == email);
-    final accountData = {
+
+    // Check if account exists by userId (for accounts where email might have changed)
+    final userId = await getUserIdForEmail(email);
+    final existingIndexById = userId != null
+        ? accounts.indexWhere((account) => account['userId'] == userId)
+        : -1;
+
+    // Determine if we have an existing account and which index to use
+    final hasExistingAccount = existingIndex >= 0 || existingIndexById >= 0;
+    final indexToUpdate =
+        existingIndex >= 0 ? existingIndex : existingIndexById;
+
+    final Map<String, String> accountData = {
       'email': email,
-      'password': password ?? '',
       'authType': authType,
     };
 
-    if (existingIndex >= 0) {
-      accounts[existingIndex] = accountData;
+    // Only add password if provided and not empty
+    if (password != null && password.isNotEmpty) {
+      accountData['password'] = password;
+    }
+
+    if (hasExistingAccount) {
+      // Keep the userId if it exists
+      if (accounts[indexToUpdate].containsKey('userId')) {
+        accountData['userId'] = accounts[indexToUpdate]['userId']!;
+      }
+      // Keep the displayName if it exists
+      if (accounts[indexToUpdate].containsKey('displayName')) {
+        accountData['displayName'] = accounts[indexToUpdate]['displayName']!;
+      }
+
+      // Remove any potential duplicate if we're updating by userId
+      if (existingIndex >= 0 &&
+          existingIndexById >= 0 &&
+          existingIndex != existingIndexById) {
+        // We have two entries - remove one of them
+        accounts.removeAt(existingIndexById);
+      }
+
+      accounts[indexToUpdate] = accountData;
     } else {
       accounts.add(accountData);
     }
 
-    await _storage.write(key: _accountsKey, value: jsonEncode(accounts));
+    await _secureStorage.write(
+        key: _userAccountsKey, value: jsonEncode(accounts));
   }
 
   Future<Map<String, String>?> getAccountDetails(String email) async {
@@ -44,5 +214,46 @@ class CredentialService {
       orElse: () => {},
     );
     return account.isEmpty ? null : account;
+  }
+
+  Future<String?> getUserIdForEmail(String email) async {
+    final accounts = await getUserAccounts();
+    final account = accounts.firstWhere(
+      (account) => account['email'] == email,
+      orElse: () => {},
+    );
+    return account['userId'];
+  }
+
+  // Add a utility method to clean up duplicate accounts
+  Future<void> cleanupDuplicateAccounts() async {
+    final accounts = await getUserAccounts();
+    final Set<String> emails = {};
+    final Set<String> userIds = {};
+    final List<Map<String, String>> uniqueAccounts = [];
+
+    for (var account in accounts) {
+      final email = account['email'];
+      final userId = account['userId'];
+
+      // Only add the account if we haven't seen this email or userId before
+      if ((email != null && !emails.contains(email)) ||
+          (userId != null && !userIds.contains(userId))) {
+        // Remember we've seen this email and userId
+        if (email != null) emails.add(email);
+        if (userId != null) userIds.add(userId);
+
+        uniqueAccounts.add(account);
+      }
+    }
+
+    if (uniqueAccounts.length < accounts.length) {
+      // We removed duplicates, save the cleaned list
+      await _secureStorage.write(
+          key: _userAccountsKey, value: jsonEncode(uniqueAccounts));
+
+      print(
+          'Removed ${accounts.length - uniqueAccounts.length} duplicate accounts');
+    }
   }
 }

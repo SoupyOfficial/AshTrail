@@ -5,15 +5,8 @@ import '../providers/auth_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../services/credential_service.dart';
-import 'theme_toggle_switch.dart';
 import 'user_switcher.dart';
 import 'sync_indicator.dart';
-
-// Provider for user accounts to prevent excessive rebuilds
-final userAccountsProvider = FutureProvider<List<Map<String, String>>>((ref) {
-  final credentialService = ref.read(credentialServiceProvider);
-  return credentialService.getUserAccounts();
-});
 
 class CustomAppBar extends ConsumerStatefulWidget
     implements PreferredSizeWidget {
@@ -38,13 +31,65 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
     if (email == FirebaseAuth.instance.currentUser?.email) return;
 
     try {
+      // Show a loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text("Switching accounts..."),
+            ],
+          ),
+        ),
+      );
+
+      // Set a timeout to ensure dialog closes even if there's an issue
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted && Navigator.of(context, rootNavigator: true).canPop()) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+      });
+
+      // Clean up any duplicate accounts before switching
+      await ref.read(credentialServiceProvider).cleanupDuplicateAccounts();
+
+      // Perform the account switch
       await ref.read(authServiceProvider).switchAccount(email);
+
+      // Close the loading dialog immediately after core operation completes
+      if (mounted && Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      // Handle UI updates AFTER dialog is closed
+      Future.microtask(() {
+        // Refresh all the providers that depend on the current user
+        ref.invalidate(userAccountsProvider);
+        ref.invalidate(authStateProvider);
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Switched to $email')),
+          );
+        }
+      });
     } catch (e) {
+      // Close the loading dialog if it's showing
+      if (mounted && Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to switch account: $e')),
         );
       }
+
+      debugPrint('Account switch error: $e');
     }
   }
 
@@ -113,11 +158,7 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
               loading: () => const SizedBox(width: 24),
               error: (_, __) => const SizedBox(width: 24),
             ),
-            const ThemeToggleSwitch(),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () => _signOut(),
-            ),
+            // Removed ThemeToggleSwitch and logout button
           ],
         );
       },

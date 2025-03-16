@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as provider;
 import '../../widgets/custom_app_bar.dart';
+import '../../theme/theme_provider.dart';
 import 'personal_info_screen.dart';
 import 'my_data_screen.dart';
 import 'account_options_screen.dart';
@@ -14,19 +16,14 @@ class SettingsScreen extends ConsumerWidget {
     final userProfileAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'Settings',
-        showBackButton: true,
-      ),
+      appBar: const CustomAppBar(title: 'Settings', showBackButton: true),
       body: userProfileAsync.when(
         data: (profile) {
           return ListView(
             children: [
               if (profile != null)
                 ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.person),
-                  ),
+                  leading: const CircleAvatar(child: Icon(Icons.person)),
                   title: Text(
                     '${profile.firstName} ${profile.lastName ?? ''}',
                     style: Theme.of(context).textTheme.titleMedium,
@@ -76,6 +73,38 @@ class SettingsScreen extends ConsumerWidget {
                   );
                 },
               ),
+              // Add new section for app customization
+              const Divider(),
+              const Padding(
+                padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
+                child: Text(
+                  'Customization',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              provider.Consumer<ThemeProvider>(
+                builder: (context, themeProvider, _) {
+                  return ListTile(
+                    leading: Icon(
+                      themeProvider.isDarkMode
+                          ? Icons.light_mode
+                          : Icons.dark_mode,
+                    ),
+                    title: Text(
+                      themeProvider.isDarkMode
+                          ? 'Switch to Light Theme'
+                          : 'Switch to Dark Theme',
+                    ),
+                    subtitle: const Text('Change app appearance'),
+                    onTap: () {
+                      themeProvider.toggleTheme();
+                    },
+                  );
+                },
+              ),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.info_outline),
@@ -96,9 +125,8 @@ class SettingsScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Text('Error loading profile: $error'),
-        ),
+        error:
+            (error, _) => Center(child: Text('Error loading profile: $error')),
       ),
     );
   }

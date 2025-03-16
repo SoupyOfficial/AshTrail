@@ -5,6 +5,152 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'dart:math';
 import 'credential_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Provide credential service
+final credentialServiceProvider = Provider<CredentialService>((ref) {
+  return CredentialService();
+});
+
+// Provide list of user accounts
+final userAccountsProvider = FutureProvider<List<Map<String, String>>>((
+  ref,
+) async {
+  final credentialService = ref.watch(credentialServiceProvider);
+  return await credentialService.getUserAccounts();
+});
+
+// Provide active user ID
+final activeUserIdProvider = FutureProvider<String?>((ref) async {
+  final credentialService = ref.watch(credentialServiceProvider);
+  return await credentialService.getActiveUserId();
+});
+
+// Track the currently active user type
+final userAuthTypeProvider = StateProvider<String?>((ref) => null);
+
+// Auth provider for managing authentication
+class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final CredentialService _credentialService;
+
+  AuthNotifier(this._credentialService) : super(const AsyncValue.loading()) {
+    _initialize();
+  }
+
+  void _initialize() async {
+    try {
+      // Save the current user immediately if there is one
+      final currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        debugPrint('Current user found on startup: ${currentUser.email}');
+        await _credentialService.saveUserAccount(currentUser);
+      } else {
+        debugPrint('No current user on startup');
+      }
+
+      // Listen to Firebase auth state changes
+      _auth.authStateChanges().listen((user) async {
+        if (user != null) {
+          debugPrint('Auth state changed: user ${user.email} logged in');
+          // Save user without signing out others
+          await _credentialService.saveUserAccount(user);
+        } else {
+          debugPrint('Auth state changed: user logged out');
+        }
+        state = AsyncValue.data(user);
+      });
+
+      // Check if we have an active user that should be used
+      final activeUserId = await _credentialService.getActiveUserId();
+      if (activeUserId != null &&
+          currentUser != null &&
+          currentUser.uid != activeUserId) {
+        // We need to switch to the active user
+        debugPrint('Switching to active user: $activeUserId');
+        await switchToUser(activeUserId);
+      }
+    } catch (e) {
+      debugPrint('Error in AuthNotifier initialization: $e');
+    }
+  }
+
+  // Sign in with email and password
+  Future<void> signInWithEmailPassword(String email, String password) async {
+    try {
+      state = const AsyncValue.loading();
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+      rethrow;
+    }
+  }
+
+  // Switch to a different user without signing out
+  Future<void> switchToUser(String userId) async {
+    try {
+      state = const AsyncValue.loading();
+
+      // Get all accounts
+      final accounts = await _credentialService.getUserAccounts();
+      final targetAccount = accounts.firstWhere(
+        (account) => account['userId'] == userId,
+        orElse: () => {'userId': '', 'email': '', 'authType': ''},
+      );
+
+      if (targetAccount['userId']!.isNotEmpty) {
+        // Set as active user
+        await _credentialService.setActiveUser(userId);
+
+        // Update user auth type for UI
+        if (targetAccount['authType'] != null) {
+          // This would need a ref to the provider - will be handled in the switchAccount method
+        }
+
+        // Check if this is already the current user
+        if (_auth.currentUser?.uid != userId) {
+          // We need to sign in as this user
+          if (targetAccount['email']?.isNotEmpty == true) {
+            await _credentialService.setActiveUser(targetAccount['email']!);
+          }
+        }
+      }
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  // Add a new account without signing out current one
+  Future<void> addNewAccount(String email, String password) async {
+    // First save the current user's credentials
+    final currentUser = _auth.currentUser;
+
+    try {
+      // Sign in with the new account
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final newUser = _auth.currentUser!;
+
+      // Save the new account
+      await _credentialService.saveUserAccount(newUser);
+
+      // If we had a previous user, switch back to them
+      if (currentUser != null) {
+        // Here you would restore the previous session
+        // This is where the implementation would need custom Firebase token handling
+      }
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+      rethrow;
+    }
+  }
+}
+
+final authProvider = StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((
+  ref,
+) {
+  final credentialService = ref.watch(credentialServiceProvider);
+  return AuthNotifier(credentialService);
+});
 
 class AuthService {
   final FirebaseAuth _auth;
@@ -34,7 +180,9 @@ class AuthService {
   }
 
   Future<UserCredential> signInWithEmailAndPassword(
-      String email, String password) async {
+    String email,
+    String password,
+  ) async {
     try {
       debugPrint('Attempting email/password sign-in for $email');
       final credential = await _auth.signInWithEmailAndPassword(
@@ -44,12 +192,21 @@ class AuthService {
 
       debugPrint('Email sign-in successful for ${credential.user?.email}');
       await _ensureUserDocument(credential);
-      await _credentialService.addUserAccount(email, password, 'password');
+
+      // Store the password for future account switching
+      if (credential.user != null) {
+        await _credentialService.saveUserAccount(
+          credential.user!,
+          password: password,
+          authType: 'password',
+        );
+      }
 
       return credential;
     } on FirebaseAuthException catch (e) {
       debugPrint(
-          'Firebase auth exception during sign-in: ${e.code} - ${e.message}');
+        'Firebase auth exception during sign-in: ${e.code} - ${e.message}',
+      );
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('Unexpected error during sign-in: $e');
@@ -79,16 +236,13 @@ class AuthService {
       debugPrint('Google sign-in successful for ${userCredential.user?.email}');
 
       await _ensureUserDocument(userCredential);
-      await _credentialService.addUserAccount(
-        googleUser.email,
-        null,
-        'google',
-      );
+      await _credentialService.addUserAccount(googleUser.email, null, 'google');
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
       debugPrint(
-          'Firebase auth exception during Google sign-in: ${e.code} - ${e.message}');
+        'Firebase auth exception during Google sign-in: ${e.code} - ${e.message}',
+      );
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('Unexpected error during Google sign-in: $e');
@@ -108,7 +262,7 @@ class AuthService {
         final provider = OAuthProvider('apple.com');
         provider.setCustomParameters({
           'locale': 'en', // Specify language
-          'prompt': 'consent' // Always require consent
+          'prompt': 'consent', // Always require consent
         });
 
         // Sign in with popup for better user experience on web
@@ -145,7 +299,8 @@ class AuthService {
               throw Exception('Apple Sign-In request was not handled');
             case AuthorizationErrorCode.unknown:
               throw Exception(
-                  'Apple Sign-In failed with an unknown error: ${error.message}');
+                'Apple Sign-In failed with an unknown error: ${error.message}',
+              );
             default:
               throw Exception('Apple Sign-In failed: ${error.message}');
           }
@@ -186,9 +341,10 @@ class AuthService {
       String? displayName;
       if (appleCredential.givenName != null ||
           appleCredential.familyName != null) {
-        displayName = [appleCredential.givenName, appleCredential.familyName]
-            .where((name) => name != null && name.isNotEmpty)
-            .join(' ');
+        displayName = [
+          appleCredential.givenName,
+          appleCredential.familyName,
+        ].where((name) => name != null && name.isNotEmpty).join(' ');
 
         debugPrint('Display name from Apple credential: $displayName');
 
@@ -203,11 +359,7 @@ class AuthService {
 
       await _ensureUserDocument(userCredential);
       if (email != null) {
-        await _credentialService.addUserAccount(
-          email,
-          null,
-          'apple',
-        );
+        await _credentialService.addUserAccount(email, null, 'apple');
         debugPrint('Added Apple user account to credential service: $email');
       } else {
         debugPrint('Warning: No email available from Apple Sign-In');
@@ -219,7 +371,8 @@ class AuthService {
       throw Exception('Apple sign-in failed: $e');
     } on FirebaseAuthException catch (e) {
       debugPrint(
-          'Firebase auth exception during Apple sign-in: ${e.code} - ${e.message}');
+        'Firebase auth exception during Apple sign-in: ${e.code} - ${e.message}',
+      );
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('Unexpected error during Apple sign-in: $e');
@@ -227,20 +380,85 @@ class AuthService {
     }
   }
 
-  Future<void> switchAccount(String email) async {
-    final accountDetails = await _credentialService.getAccountDetails(email);
-    if (accountDetails == null) throw Exception('Account not found');
+  Future<void> switchToUser(String userId) async {
+    try {
+      // Get all accounts
+      final accounts = await _credentialService.getUserAccounts();
+      final targetAccount = accounts.firstWhere(
+        (account) => account['userId'] == userId,
+        orElse: () => {},
+      );
 
-    if (accountDetails['authType'] == 'google') {
-      await signInWithGoogle();
-    } else if (accountDetails['authType'] == 'apple') {
-      await signInWithApple();
-    } else if (accountDetails['authType'] == 'password') {
-      final password = accountDetails['password'];
-      if (password == null || password.isEmpty) {
-        throw Exception('Password not found for account');
+      if (targetAccount.isNotEmpty) {
+        final email = targetAccount['email'];
+        if (email != null && email.isNotEmpty) {
+          await switchAccount(email);
+        } else {
+          throw Exception('Account has no email address');
+        }
+      } else {
+        throw Exception('Account not found');
       }
-      await signInWithEmailAndPassword(email, password);
+    } catch (e) {
+      debugPrint('Error switching to user: $e');
+      throw Exception('Failed to switch accounts: $e');
+    }
+  }
+
+  Future<void> switchAccount(String email) async {
+    try {
+      debugPrint('Attempting to switch to account: $email');
+
+      // If this is already the current account, return immediately
+      if (_auth.currentUser?.email == email) {
+        debugPrint('Already signed in as $email, no need to switch');
+        return;
+      }
+
+      final accountDetails = await _credentialService.getAccountDetails(email);
+      if (accountDetails == null) {
+        throw Exception('Account details not found');
+      }
+
+      final authType = accountDetails['authType'] ?? 'password';
+      debugPrint('Account auth type: $authType');
+
+      // Pre-set the active user to avoid unnecessary operations
+      final userId = accountDetails['userId'];
+      if (userId != null) {
+        await _credentialService.setActiveUser(userId);
+      }
+
+      // For password auth, handle it more efficiently
+      if (authType == 'password') {
+        final password = accountDetails['password'];
+        if (password == null || password.isEmpty) {
+          throw Exception('Password not found for account: $email');
+        }
+
+        // Sign in directly without extra operations
+        await _auth.signInWithEmailAndPassword(
+            email: email, password: password);
+        debugPrint('Switched to account: $email via password auth');
+        return;
+      }
+
+      // For other auth types, use the existing methods
+      switch (authType) {
+        case 'google':
+          await signInWithGoogle();
+          break;
+        case 'apple':
+          await signInWithApple();
+          break;
+        default:
+          throw Exception('Unsupported authentication type: $authType');
+      }
+
+      debugPrint('Successfully switched to account: $email');
+    } catch (e) {
+      debugPrint('Error switching account: $e');
+      throw Exception('Failed to switch to account: $e');
     }
   }
 
@@ -286,7 +504,8 @@ class AuthService {
         return Exception('This account has been disabled');
       case 'account-exists-with-different-credential':
         return Exception(
-            'An account already exists with the same email address');
+          'An account already exists with the same email address',
+        );
       case 'invalid-credential':
         return Exception('The credential is malformed or has expired');
       case 'operation-not-allowed':
@@ -295,7 +514,8 @@ class AuthService {
         return Exception('The password is too weak');
       case 'network-request-failed':
         return Exception(
-            'Network connection failed. Please check your internet connection');
+          'Network connection failed. Please check your internet connection',
+        );
       default:
         return Exception(e.message ?? 'Authentication failed');
     }
