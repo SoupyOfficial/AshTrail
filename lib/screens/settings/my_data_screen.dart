@@ -87,8 +87,9 @@ class _MyDataScreenState extends ConsumerState<MyDataScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Delete All Data'),
         content: const Text(
-          'Are you sure you want to delete all your data from the server? '
-          'This action cannot be undone.',
+          'Are you sure you want to delete all your data from the server?\n\n'
+          'WARNING: This action is PERMANENT and CANNOT be undone. All your logs '
+          'and tracking history will be permanently erased.',
         ),
         actions: [
           TextButton(
@@ -100,7 +101,7 @@ class _MyDataScreenState extends ConsumerState<MyDataScreen> {
               foregroundColor: Theme.of(context).colorScheme.error,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: const Text('Proceed'),
           ),
         ],
       ),
@@ -117,8 +118,11 @@ class _MyDataScreenState extends ConsumerState<MyDataScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('This will permanently delete all your data. '
-                'To confirm, please type "DELETE" below:'),
+            const Text(
+              'This will PERMANENTLY delete all your data. '
+              'This action is IRREVERSIBLE and all your tracking history will be lost forever.\n\n'
+              'To confirm, please type "DELETE" below:',
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: confirmController,
@@ -141,7 +145,7 @@ class _MyDataScreenState extends ConsumerState<MyDataScreen> {
             onPressed: () => Navigator.of(context).pop(
               confirmController.text == 'DELETE',
             ),
-            child: const Text('Confirm Deletion'),
+            child: const Text('Continue'),
           ),
         ],
       ),
@@ -150,6 +154,36 @@ class _MyDataScreenState extends ConsumerState<MyDataScreen> {
     confirmController.dispose();
 
     if (confirm2 != true) return;
+
+    // Third and final confirmation dialog
+    final confirm3 = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Final Warning'),
+        content: const Text(
+          'You are about to PERMANENTLY ERASE all your data.\n\n'
+          'This is your FINAL WARNING.\n\n'
+          'Once confirmed, you CANNOT recover your data.',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Go Back'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete Everything'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm3 != true) return;
 
     // Perform the deletion
     setState(() {

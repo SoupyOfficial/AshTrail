@@ -107,21 +107,69 @@ class SettingsScreen extends ConsumerWidget {
                 },
               ),
 
-              // Add accent color option
+              // Add accent color option with improved visual and reset functionality
               provider.Consumer<ThemeProvider>(
                 builder: (context, themeProvider, _) {
+                  final isDefaultBlue =
+                      themeProvider.accentColor == Colors.blue;
+
                   return ListTile(
                     leading: const Icon(Icons.color_lens),
-                    title: const Text('Accent Color'),
+                    title: Row(
+                      children: [
+                        const Text('Accent Color'),
+                        if (!isDefaultBlue) ...[
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () {
+                              themeProvider.setAccentColor(Colors.blue);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Reset to default blue')),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.refresh, size: 14),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Reset',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                     subtitle: const Text('Customize app colors'),
-                    trailing: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: themeProvider.accentColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey),
-                      ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: themeProvider.accentColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right),
+                      ],
                     ),
                     onTap: () {
                       Navigator.push(

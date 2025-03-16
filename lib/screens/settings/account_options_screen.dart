@@ -223,8 +223,232 @@ class AccountOptionsScreen extends ConsumerWidget {
               'Delete Account',
               style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
-            onTap: () {
-              // Implement account deletion functionality
+            onTap: () async {
+              // First confirmation dialog
+              final confirm1 = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Account'),
+                  content: const Text(
+                    'Are you sure you want to delete your account?\n\n'
+                    'WARNING: This action is PERMANENT and CANNOT be undone. '
+                    'Your account and all your data will be permanently erased.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Proceed'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm1 != true || !context.mounted) return;
+
+              // Second confirmation dialog requiring password
+              final passwordController = TextEditingController();
+              final confirm2 = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Confirm Account Deletion'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'This will PERMANENTLY delete your account and all your data. '
+                        'This action is IRREVERSIBLE.\n\n'
+                        'To confirm, please type "DELETE MY ACCOUNT" below:',
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: passwordController,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
+                        autofocus: true,
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                      onPressed: () => Navigator.pop(
+                        context,
+                        passwordController.text == 'DELETE MY ACCOUNT',
+                      ),
+                      child: const Text('Continue'),
+                    ),
+                  ],
+                ),
+              );
+
+              passwordController.dispose();
+
+              if (confirm2 != true || !context.mounted) return;
+
+              // Third and final confirmation dialog
+              final confirm3 = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Final Warning'),
+                  content: const Text(
+                    'You are about to PERMANENTLY DELETE your account and all associated data.\n\n'
+                    'This is your FINAL WARNING.\n\n'
+                    'Once confirmed, your account will be terminated and you CANNOT recover your data.',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Go Back'),
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        foregroundColor: Theme.of(context).colorScheme.onError,
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Delete My Account Permanently'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm3 != true || !context.mounted) return;
+
+              // Show password confirmation for final security check
+              final securityController = TextEditingController();
+              final passwordConfirm = await showDialog<String>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Confirm Password'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'For security reasons, please enter your password to complete account deletion:',
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: securityController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Password',
+                        ),
+                        autofocus: true,
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, null),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        foregroundColor: Theme.of(context).colorScheme.onError,
+                      ),
+                      onPressed: () =>
+                          Navigator.pop(context, securityController.text),
+                      child: const Text('Delete Account'),
+                    ),
+                  ],
+                ),
+              );
+
+              securityController.dispose();
+
+              if (passwordConfirm == null ||
+                  passwordConfirm.isEmpty ||
+                  !context.mounted) return;
+
+              // Show loading indicator
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const AlertDialog(
+                  content: Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 16),
+                      Text("Deleting account..."),
+                    ],
+                  ),
+                ),
+              );
+
+              try {
+                // Call the user profile service to delete the account
+                final userProfileService = ref.read(userProfileServiceProvider);
+                await userProfileService.deleteAccount(passwordConfirm);
+
+                // Close the loading dialog
+                if (context.mounted &&
+                    Navigator.of(context, rootNavigator: true).canPop()) {
+                  Navigator.of(context, rootNavigator: true).pop();
+                }
+
+                // Get the updated user accounts list
+                final userAccounts =
+                    await ref.read(credentialServiceProvider).getUserAccounts();
+                // Navigate to login screen
+                if (context.mounted && userAccounts.isEmpty) {
+                  // If no accounts left, go to login screen
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                } else {
+                  // If accounts remain, go back to the account settings screen
+                  Navigator.of(context).pop();
+
+                  // Set the first account as active
+                  if (userAccounts.isNotEmpty) {
+                    final firstAccount = userAccounts.first;
+                    await ref
+                        .read(authServiceProvider)
+                        .switchAccount(firstAccount['email']!);
+                  }
+                  // Refresh the page to show updated accounts
+                  ref.refresh(userAccountsProvider);
+                  // Show success message
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Account deleted successfully'),
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                // Close the loading dialog
+                if (context.mounted &&
+                    Navigator.of(context, rootNavigator: true).canPop()) {
+                  Navigator.of(context, rootNavigator: true).pop();
+                }
+
+                // Show error message
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete account: $e')),
+                  );
+                }
+              }
             },
           ),
         ],

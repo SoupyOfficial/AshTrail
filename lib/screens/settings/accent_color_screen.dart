@@ -112,26 +112,26 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
                       ],
                     ),
 
-                    // Add app bar preview
-                    const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: pickerColor,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'App Bar Preview',
-                        style: TextStyle(
-                          color: _contrastingColor(pickerColor),
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                    // // Add app bar preview
+                    // const SizedBox(height: 16),
+                    // Container(
+                    //   width: double.infinity,
+                    //   height: 48,
+                    //   decoration: BoxDecoration(
+                    //     color: pickerColor,
+                    //     borderRadius: BorderRadius.circular(4),
+                    //   ),
+                    //   alignment: Alignment.centerLeft,
+                    //   padding: const EdgeInsets.symmetric(horizontal: 16),
+                    //   child: Text(
+                    //     'App Bar Preview',
+                    //     style: TextStyle(
+                    //       color: _contrastingColor(pickerColor),
+                    //       fontSize: 18,
+                    //       fontWeight: FontWeight.bold,
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
