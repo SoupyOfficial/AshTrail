@@ -26,7 +26,7 @@ class CredentialService {
     // Get existing accounts
     final accounts = await getUserAccounts();
 
-    // Check if this account already exists by userId or email
+    // Find existing account
     final existingIndexById =
         accounts.indexWhere((account) => account['userId'] == user.uid);
     final existingIndexByEmail =
@@ -45,17 +45,15 @@ class CredentialService {
       'authType': authType ?? _determineAuthType(user),
     };
 
-    // Only include password if provided and not empty
+    // Important: Preserve existing password if none provided
     if (password != null && password.isNotEmpty) {
       accountData['password'] = password;
+    } else if (hasExistingAccount &&
+        accounts[indexToUpdate].containsKey('password')) {
+      accountData['password'] = accounts[indexToUpdate]['password']!;
     }
 
     if (hasExistingAccount) {
-      // Update existing account but preserve password if not provided
-      if (password == null && accounts[indexToUpdate].containsKey('password')) {
-        accountData['password'] = accounts[indexToUpdate]['password']!;
-      }
-
       // Remove any potential duplicate by email if we're updating by userId
       if (existingIndexById >= 0 &&
           existingIndexByEmail >= 0 &&

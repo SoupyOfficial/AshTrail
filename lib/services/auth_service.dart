@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:smoke_log/theme/theme_provider.dart';
 import 'dart:math';
 import 'credential_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -152,13 +153,18 @@ final authProvider = StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((
   return AuthNotifier(credentialService);
 });
 
+// Add a provider for ThemeProvider
+final themeProvider = Provider<ThemeProvider>((ref) => ThemeProvider());
+
 class AuthService {
   final FirebaseAuth _auth;
   final GoogleSignIn _googleSignIn;
   final CredentialService _credentialService;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ProviderRef _ref;
 
-  AuthService(this._auth, this._googleSignIn, this._credentialService);
+  AuthService(
+      this._auth, this._googleSignIn, this._credentialService, this._ref);
 
   Future<void> _ensureUserDocument(UserCredential credential) async {
     try {
@@ -454,8 +460,14 @@ class AuthService {
         default:
           throw Exception('Unsupported authentication type: $authType');
       }
-
-      debugPrint('Successfully switched to account: $email');
+      // After successful switch, ensure we reload theme preferences
+      try {
+        // Access ThemeProvider through Riverpod
+        await _ref.read(themeProvider).reloadPreferences();
+      } catch (e) {
+        debugPrint('Error reloading theme preferences: $e');
+        // Don't fail the account switch if theme reload fails
+      }
     } catch (e) {
       debugPrint('Error switching account: $e');
       throw Exception('Failed to switch to account: $e');

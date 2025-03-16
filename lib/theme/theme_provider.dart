@@ -1,45 +1,62 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/user_theme_service.dart';
 
 class ThemeProvider with ChangeNotifier {
-  static const String _themePreferenceKey = 'is_dark_mode';
-  static const String _accentColorKey = 'accent_color';
   bool _isDarkMode = false;
-  Color _accentColor = Colors.blue; // Default accent color is blue
+  Color _accentColor = Colors.blue;
 
-  ThemeProvider() {
+  final UserThemeService _themeService;
+  final FirebaseAuth _auth;
+  User? _currentUser;
+
+  ThemeProvider({
+    UserThemeService? themeService,
+    FirebaseAuth? auth,
+  })  : _themeService = themeService ?? UserThemeService(),
+        _auth = auth ?? FirebaseAuth.instance {
     _loadThemePreference();
+
+    // Listen for auth state changes
+    _auth.authStateChanges().listen((User? user) {
+      final bool userChanged = (_currentUser?.uid != user?.uid);
+      _currentUser = user;
+
+      if (userChanged) {
+        // User changed, reload preferences
+        _loadThemePreference();
+      }
+    });
   }
 
   bool get isDarkMode => _isDarkMode;
   Color get accentColor => _accentColor;
-
   ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
 
-  Future<void> _loadThemePreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isDarkMode = prefs.getBool(_themePreferenceKey) ?? false;
+  /// Explicitly reload theme preferences from storage
+  /// This is useful after user account switches
+  Future<void> reloadPreferences() async {
+    await _loadThemePreference();
+  }
 
-    // Load custom accent color if saved
-    final int? colorValue = prefs.getInt(_accentColorKey);
-    if (colorValue != null) {
-      _accentColor = Color(colorValue);
-    }
+  Future<void> _loadThemePreference() async {
+    final themeSettings = await _themeService.loadThemeSettings();
+
+    _isDarkMode = themeSettings['isDarkMode'] ?? false;
+    _accentColor = themeSettings['accentColor'] ?? Colors.blue;
 
     notifyListeners();
   }
 
   Future<void> toggleTheme() async {
     _isDarkMode = !_isDarkMode;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_themePreferenceKey, _isDarkMode);
+    await _themeService.saveThemeSettings(_isDarkMode, _accentColor);
     notifyListeners();
   }
 
   Future<void> setAccentColor(Color color) async {
     _accentColor = color;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_accentColorKey, color.value);
+    await _themeService.saveThemeSettings(_isDarkMode, _accentColor);
     notifyListeners();
   }
 }

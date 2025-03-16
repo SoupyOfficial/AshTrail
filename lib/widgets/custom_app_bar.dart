@@ -93,7 +93,7 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
         );
       }
 
-      debugPrint('Account switch error: $e');
+      debugPrint('Account switch error: $e'); // Keep this error log for troubleshooting
     }
   }
 
@@ -159,9 +159,6 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
             // User account switcher with improved state handling
             accountsAsync.when(
               data: (accounts) {
-                debugPrint(
-                    'CustomAppBar: Current Firebase user - email: ${user?.email}, displayName: ${user?.displayName}');
-
                 final enrichedAccounts = accounts.map((account) {
                   // Fetch first name from user profile if available
                   final Map<String, String> enrichedAccount = {...account};
@@ -172,22 +169,11 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
                     final displayNameParts = user!.displayName!.split(' ');
                     if (displayNameParts.isNotEmpty) {
                       enrichedAccount['firstName'] = displayNameParts.first;
-                      debugPrint(
-                          'Enriched account ${account['email']} with firstName=${displayNameParts.first}');
-                    } else {
-                      debugPrint(
-                          'DisplayName present but no parts: ${user.displayName}');
                     }
-                  } else {
-                    debugPrint(
-                        'Could not enrich account ${account['email']}: userEmail=${user?.email}, hasDisplayName=${user?.displayName != null}');
                   }
 
                   return enrichedAccount;
                 }).toList();
-
-                debugPrint(
-                    'CustomAppBar: Enriched accounts: ${enrichedAccounts.map((a) => "${a['email']}: firstName=${a['firstName']}").join(', ')}');
 
                 return UserSwitcher(
                   accounts: enrichedAccounts,

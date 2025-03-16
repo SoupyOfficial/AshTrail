@@ -17,11 +17,6 @@ class UserSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Debug print entire accounts list
-    debugPrint(
-        'UserSwitcher accounts: ${accounts.map((a) => "${a['email']}: firstName=${a['firstName']}").join(', ')}');
-    debugPrint('UserSwitcher currentEmail: $currentEmail');
-
     // Make sure we have accounts to show
     if (accounts.isEmpty) {
       return const SizedBox(); // Don't show anything if no accounts
@@ -36,7 +31,6 @@ class UserSwitcher extends StatelessWidget {
     final displayAccounts = [...accounts];
     if (!currentEmailInAccounts && currentEmail != 'Guest') {
       displayAccounts.add({'email': currentEmail, 'authType': authType});
-      debugPrint('Added missing account: $currentEmail');
     }
 
     // Check for duplicate first names
@@ -47,9 +41,6 @@ class UserSwitcher extends StatelessWidget {
         firstNameCount[firstName] = (firstNameCount[firstName] ?? 0) + 1;
       }
     }
-
-    // Debug print the firstName counts
-    debugPrint('firstNameCount: $firstNameCount');
 
     // Ensure interactive hit area is large enough
     return Padding(
@@ -72,12 +63,6 @@ class UserSwitcher extends StatelessWidget {
               final bool hasUniqueName =
                   firstName.isNotEmpty && (firstNameCount[firstName] == 1);
               final displayName = hasUniqueName ? firstName : email;
-
-              // Debug for current user
-              if (isCurrentUser) {
-                debugPrint(
-                    'CURRENT USER: email=$email, firstName=$firstName, hasUniqueName=$hasUniqueName, displayName=$displayName');
-              }
 
               return PopupMenuItem<String>(
                 value: email,
@@ -142,17 +127,11 @@ class UserSwitcher extends StatelessWidget {
 
     final firstName = currentAccount['firstName'] ?? '';
 
-    // Debug the retrieved firstName for current account
-    debugPrint(
-        '_getDisplayName: email=$currentEmail, firstName=$firstName, hasUnique=${firstName.isNotEmpty && (firstNameCounts[firstName] == 1)}');
-
     // Use first name if it's available and unique, otherwise use email
     if (firstName.isNotEmpty && (firstNameCounts[firstName] == 1)) {
-      debugPrint('RETURNING FIRST NAME: $firstName');
       return firstName;
     }
 
-    debugPrint('RETURNING EMAIL: $currentEmail');
     return currentEmail;
   }
 

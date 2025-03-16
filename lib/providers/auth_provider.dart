@@ -24,6 +24,7 @@ final authServiceProvider = Provider<AuthService>((ref) {
     ref.watch(firebaseAuthProvider),
     ref.watch(googleSignInProvider),
     ref.watch(credentialServiceProvider),
+    ref, // Passing the provider reference required by AuthService
   );
 });
 
