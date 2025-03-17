@@ -1,114 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/auth_provider.dart';
-import '../services/credential_service.dart';
-import '../widgets/custom_app_bar.dart';
+import '../providers/user_account_provider.dart';
 
+/// A widget that displays a list of user accounts and allows selection
 class UserAccountSelector extends ConsumerWidget {
+  /// The email of the currently active account
   final String currentEmail;
+
+  /// Callback when user selects an account
   final Function(String) onUserSelected;
 
   const UserAccountSelector({
-    super.key,
+    Key? key,
     required this.currentEmail,
     required this.onUserSelected,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accountsAsync = ref.watch(userAccountsProvider);
-    // Use the provider instead of direct Firebase access
-    final currentUserAsync = ref.watch(authStateProvider);
+    // Get enriched accounts with names when available
+    final accountsAsync = ref.watch(enrichedAccountsProvider);
 
-    return accountsAsync.when(
-      data: (accounts) {
-        // Filter out the current user
-        final otherAccounts = accounts
-            .where((account) => account['email'] != currentEmail)
-            .toList();
-
-        // Add first names to accounts using user displayName from the provider
-        final enrichedAccounts = otherAccounts.map((account) {
-          final enrichedAccount = {...account};
-          // Check if we have a current user and access via the provider
-          if (currentUserAsync.value?.displayName != null) {
-            final displayNameParts =
-                currentUserAsync.value!.displayName!.split(' ');
-            if (displayNameParts.isNotEmpty) {
-              enrichedAccount['firstName'] = displayNameParts.first;
-            }
-          }
-          return enrichedAccount;
-        }).toList();
-
-        // Check for duplicate first names
-        final Map<String, int> firstNameCount = {};
-        for (final account in enrichedAccounts) {
-          final firstName = account['firstName'];
-          if (firstName != null && firstName.isNotEmpty) {
-            firstNameCount[firstName] = (firstNameCount[firstName] ?? 0) + 1;
-          }
-        }
-
-        if (enrichedAccounts.isEmpty) {
-          return const Card(
-            margin: EdgeInsets.all(16.0),
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text(
-                'No other accounts available to transfer to',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        }
-
-        return Card(
-          margin: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Transfer to account:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.0,
-                  ),
+    return Card(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                const Icon(Icons.account_circle),
+                const SizedBox(width: 8),
+                const Text(
+                  'Select Account',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-              ),
-              ListView.builder(
+              ],
+            ),
+          ),
+          accountsAsync.when(
+            data: (accounts) {
+              return ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: enrichedAccounts.length,
+                itemCount: accounts.length,
                 itemBuilder: (context, index) {
-                  final account = enrichedAccounts[index];
+                  final account = accounts[index];
                   final email = account['email'] ?? 'Unknown';
                   final firstName = account['firstName'] ?? '';
+                  final hasUniqueName = account['hasUniqueName'] ?? false;
+                  final isCurrentAccount = email == currentEmail;
 
-                  // Determine display name - use firstName if unique, otherwise use email
-                  final bool hasUniqueName =
-                      firstName.isNotEmpty && (firstNameCount[firstName] == 1);
-                  final displayName = hasUniqueName ? firstName : email;
+                  // Use firstName if available and unique, otherwise use email
+                  final displayName = (firstName.isNotEmpty && hasUniqueName)
+                      ? firstName
+                      : email;
 
                   return ListTile(
-                    leading: const CircleAvatar(
-                      child: Icon(Icons.person),
+                    leading: CircleAvatar(
+                      backgroundColor: isCurrentAccount ? Colors.green : null,
+                      child: Icon(
+                        isCurrentAccount ? Icons.check : Icons.person,
+                        color: isCurrentAccount ? Colors.white : null,
+                      ),
                     ),
                     title: Text(displayName),
                     subtitle: hasUniqueName ? Text(email) : null,
-                    onTap: () => onUserSelected(email),
+                    enabled: !isCurrentAccount,
+                    onTap:
+                        isCurrentAccount ? null : () => onUserSelected(email),
                   );
                 },
-              ),
-            ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, __) =>
+                const Center(child: Text('Error loading accounts')),
           ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(child: Text('Error loading accounts')),
+        ],
+      ),
     );
   }
 }

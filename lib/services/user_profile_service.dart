@@ -53,11 +53,12 @@ class UserProfileService {
       final displayName = profile.firstName + lastName;
 
       debugPrint(
-          'Updating user displayName from "${user.displayName}" to "$displayName"');
+          'Updating user displayName from "${user.displayName}" to "$displayName" as fallback');
 
       if (user.displayName != displayName) {
+        // Update displayName as a fallback, but our app will primarily use firstName from Firestore
         await user.updateDisplayName(displayName);
-        debugPrint('DisplayName updated successfully');
+        debugPrint('DisplayName updated successfully (used as fallback only)');
       } else {
         debugPrint('DisplayName already matches, no update needed');
       }

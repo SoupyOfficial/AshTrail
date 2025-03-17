@@ -2,11 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:smoke_log/providers/auth_provider.dart';
 import 'package:smoke_log/theme/theme_provider.dart';
 import 'dart:math';
 import 'credential_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'interfaces/auth_service_interface.dart';
 
 // Provide credential service
 final credentialServiceProvider = Provider<CredentialService>((ref) {
@@ -156,7 +158,7 @@ final authProvider = StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((
 // Add a provider for ThemeProvider
 final themeProvider = Provider<ThemeProvider>((ref) => ThemeProvider());
 
-class AuthService {
+class AuthService implements IAuthService {
   final FirebaseAuth _auth;
   final GoogleSignIn _googleSignIn;
   final CredentialService _credentialService;
@@ -343,13 +345,16 @@ class AuthService {
       String? email = userCredential.user?.email;
       debugPrint('User email from credential: $email');
 
-      // Get first and last name
+      // Extract firstName and lastName from the Apple credential
+      String? firstName = appleCredential.givenName;
+      String? lastName = appleCredential.familyName;
+
+      // Create a proper displayName for fallback purposes
       String? displayName;
-      if (appleCredential.givenName != null ||
-          appleCredential.familyName != null) {
+      if (firstName != null || lastName != null) {
         displayName = [
-          appleCredential.givenName,
-          appleCredential.familyName,
+          firstName,
+          lastName,
         ].where((name) => name != null && name.isNotEmpty).join(' ');
 
         debugPrint('Display name from Apple credential: $displayName');
@@ -362,6 +367,15 @@ class AuthService {
           debugPrint('Updated user display name to: $displayName');
         }
       }
+
+      // Create or update Firestore user document with firstName and lastName
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'email': email,
+        'firstName':
+            firstName ?? 'User', // Default to "User" if firstName is null
+        'lastName': lastName,
+        'lastLoginAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
       await _ensureUserDocument(userCredential);
       if (email != null) {
@@ -413,44 +427,27 @@ class AuthService {
 
   Future<void> switchAccount(String email) async {
     try {
-      debugPrint('Attempting to switch to account: $email');
+      debugPrint('Switching to account: $email');
 
-      // If this is already the current account, return immediately
-      if (_auth.currentUser?.email == email) {
-        debugPrint('Already signed in as $email, no need to switch');
-        return;
-      }
-
+      // Get account details
       final accountDetails = await _credentialService.getAccountDetails(email);
       if (accountDetails == null) {
-        throw Exception('Account details not found');
+        throw Exception('Account details not found for email: $email');
       }
 
       final authType = accountDetails['authType'] ?? 'password';
       debugPrint('Account auth type: $authType');
 
-      // Pre-set the active user to avoid unnecessary operations
-      final userId = accountDetails['userId'];
-      if (userId != null) {
-        await _credentialService.setActiveUser(userId);
-      }
-
-      // For password auth, handle it more efficiently
-      if (authType == 'password') {
-        final password = accountDetails['password'];
-        if (password == null || password.isEmpty) {
-          throw Exception('Password not found for account: $email');
-        }
-
-        // Sign in directly without extra operations
-        await _auth.signInWithEmailAndPassword(
-            email: email, password: password);
-        debugPrint('Switched to account: $email via password auth');
-        return;
-      }
-
-      // For other auth types, use the existing methods
+      // Sign in based on the auth type
       switch (authType) {
+        case 'password':
+          final password = accountDetails['password'];
+          if (password == null || password.isEmpty) {
+            throw Exception('Password not found for account: $email');
+          }
+          await _auth.signInWithEmailAndPassword(
+              email: email, password: password);
+          break;
         case 'google':
           await signInWithGoogle();
           break;
@@ -460,43 +457,79 @@ class AuthService {
         default:
           throw Exception('Unsupported authentication type: $authType');
       }
-      // After successful switch, ensure we reload theme preferences
-      try {
-        // Access ThemeProvider through Riverpod
-        await _ref.read(themeProvider).reloadPreferences();
-      } catch (e) {
-        debugPrint('Error reloading theme preferences: $e');
-        // Don't fail the account switch if theme reload fails
+
+      // Set the switched account as active
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _credentialService.setActiveUser(user.uid);
       }
+
+      // Refresh theme preferences
+      await _ref.read(themeProvider).reloadPreferences();
     } catch (e) {
       debugPrint('Error switching account: $e');
-      throw Exception('Failed to switch to account: $e');
+      throw Exception('Failed to switch account: $e');
     }
   }
 
-  Future<void> signOut() async {
+  @override
+  Future<SignOutResult> signOut() async {
     try {
-      // First try to sign out from Firebase, as this is most important
+      // Sign out from Firebase
       await _auth.signOut();
       debugPrint('Successfully signed out from Firebase');
 
-      // Then attempt to sign out from Google, but handle errors gracefully
-      if (_auth.currentUser == null) {
+      // Check contents of accounts list
+      var accounts = await _credentialService.getUserAccounts();
+      debugPrint('Accounts available: ${accounts.length}');
+
+      final activeUserEmail = await _credentialService.getActiveUserEmail();
+      final activeUserId = await _credentialService.getActiveUserId();
+      debugPrint('Active user email: $activeUserEmail');
+
+      // Clear active user ID in CredentialService
+      await _credentialService.clearActiveUser();
+      debugPrint('Cleared active user in CredentialService');
+
+      if (activeUserId != null) {
+        await _credentialService.removeUserAccount(activeUserId);
+      } else {
+        debugPrint('No active user id found to remove.');
+      }
+
+      // Check if there are other accounts available
+      accounts = await _credentialService.getUserAccounts();
+      debugPrint('Accounts after sign-out: ${accounts.length}');
+      if (accounts.isNotEmpty) {
+        // Switch to the first available account
+        final nextAccount = accounts.first;
+        final email = nextAccount['email'];
+        if (email != null && email.isNotEmpty) {
+          debugPrint('Switching to next available account: $email');
+          await switchAccount(email);
+          return SignOutResult.switchedToAnotherUser;
+        } else {
+          debugPrint('No valid email found for the next account');
+        }
+      } else {
+        debugPrint('No other accounts available. Fully signed out.');
+      }
+
+      // Optionally, sign out from Google if applicable
+      if (!kIsWeb) {
         try {
-          // On web, the sign-out may fail due to localhost issues during development
-          // For native platforms, we can still try
-          if (!kIsWeb) {
-            await _googleSignIn.signOut();
-            debugPrint('Successfully signed out from Google');
-          } else {
-            debugPrint('Skipping Google sign-out on web platform');
-          }
+          await _googleSignIn.signOut();
+          debugPrint('Successfully signed out from Google');
         } catch (e) {
-          // Just log the error but don't fail the whole sign-out process
-          // This addresses the PlatformException on localhost development
           debugPrint('Google Sign-Out Error (non-critical): $e');
         }
       }
+
+      // Invalidate auth-related providers
+      _ref.invalidate(authStateProvider);
+      _ref.invalidate(userAuthTypeProvider);
+
+      return SignOutResult.fullySignedOut;
     } catch (e) {
       debugPrint('Sign-out error: $e');
       throw Exception('Failed to sign out: $e');
@@ -532,4 +565,42 @@ class AuthService {
         return Exception(e.message ?? 'Authentication failed');
     }
   }
+
+  // Implement the missing getter from IAuthService
+  @override
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  // Implement the missing deleteAccount method from IAuthService
+  @override
+  Future<void> deleteAccount(String userId) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || user.uid != userId) {
+        throw Exception('No matching user is currently signed in');
+      }
+
+      // Delete user data from Firestore
+      await _firestore.collection('users').doc(user.uid).delete();
+
+      // Remove user account from credential service
+      await _credentialService.removeUserAccount(user.uid);
+
+      // Delete the Firebase Auth user
+      await user.delete();
+
+      debugPrint('Account deleted successfully: ${user.email}');
+    } on FirebaseAuthException catch (e) {
+      debugPrint(
+          'Firebase auth exception during account deletion: ${e.code} - ${e.message}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      debugPrint('Error deleting account: $e');
+      throw Exception('Failed to delete account: $e');
+    }
+  }
+}
+
+enum SignOutResult {
+  switchedToAnotherUser, // Indicates another user was switched to
+  fullySignedOut, // Indicates no other users were available
 }

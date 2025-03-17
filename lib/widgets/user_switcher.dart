@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class UserSwitcher extends StatelessWidget {
-  final List<Map<String, String>> accounts;
+  final List<Map<String, dynamic>> accounts;
   final String currentEmail;
   final Function(String) onSwitchAccount;
   final String authType;
@@ -36,7 +36,7 @@ class UserSwitcher extends StatelessWidget {
     // Check for duplicate first names
     final Map<String, int> firstNameCount = {};
     for (final account in displayAccounts) {
-      final firstName = account['firstName'];
+      final firstName = account['firstName']?.toString();
       if (firstName != null && firstName.isNotEmpty) {
         firstNameCount[firstName] = (firstNameCount[firstName] ?? 0) + 1;
       }
@@ -53,15 +53,16 @@ class UserSwitcher extends StatelessWidget {
         itemBuilder: (context) {
           final List<PopupMenuEntry<String>> menuItems = [
             ...displayAccounts.map((account) {
-              final email = account['email'] ?? '';
-              final firstName = account['firstName'] ?? '';
-              final accountAuthType = account['authType'] ?? 'password';
+              final email = account['email']?.toString() ?? '';
+              final firstName = account['firstName']?.toString() ?? '';
+              final accountAuthType =
+                  account['authType']?.toString() ?? 'password';
               final isCurrentUser = email == currentEmail;
               final icon = isCurrentUser ? Icons.check : null;
 
               // Determine display name - use firstName if unique, otherwise use email
-              final bool hasUniqueName =
-                  firstName.isNotEmpty && (firstNameCount[firstName] == 1);
+              final bool hasUniqueName = account['hasUniqueName'] == true ||
+                  (firstName.isNotEmpty && (firstNameCount[firstName] == 1));
               final displayName = hasUniqueName ? firstName : email;
 
               return PopupMenuItem<String>(
@@ -117,7 +118,7 @@ class UserSwitcher extends StatelessWidget {
     );
   }
 
-  String _getDisplayName(List<Map<String, String>> accounts,
+  String _getDisplayName(List<Map<String, dynamic>> accounts,
       String currentEmail, Map<String, int> firstNameCounts) {
     // Find current user account
     final currentAccount = accounts.firstWhere(
@@ -125,10 +126,13 @@ class UserSwitcher extends StatelessWidget {
       orElse: () => {'email': currentEmail},
     );
 
-    final firstName = currentAccount['firstName'] ?? '';
+    final firstName = currentAccount['firstName']?.toString() ?? '';
 
     // Use first name if it's available and unique, otherwise use email
-    if (firstName.isNotEmpty && (firstNameCounts[firstName] == 1)) {
+    final bool hasUniqueName = currentAccount['hasUniqueName'] == true ||
+        (firstName.isNotEmpty && (firstNameCounts[firstName] == 1));
+
+    if (hasUniqueName) {
       return firstName;
     }
 

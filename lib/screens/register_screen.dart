@@ -29,12 +29,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           password: _passwordController.text.trim(),
         );
 
-        // Set display name
+        // Set display name as a fallback mechanism
         await userCredential.user!.updateDisplayName(
           "${_firstNameController.text.trim()} ${_lastNameController.text.trim()}",
         );
+        debugPrint('Set Firebase Auth displayName as fallback');
 
         // Create user document in Firestore with additional fields
+        // This is what our app will primarily use for display
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userCredential.user!.uid)
@@ -46,6 +48,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'lastLoginAt': FieldValue.serverTimestamp(),
           'isActive': true,
         });
+        debugPrint(
+            'Created Firestore user document with firstName and lastName');
 
         if (mounted) Navigator.pop(context); // Return to login screen
       } on FirebaseAuthException catch (e) {

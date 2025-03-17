@@ -67,5 +67,7 @@ final userAccountsProvider =
     await credentialService.saveUserAccount(authState.value!);
   }
 
-  return await credentialService.getUserAccounts();
+  return (await credentialService.getUserAccounts())
+      .map((account) => account.map((key, value) => MapEntry(key, value ?? '')))
+      .toList();
 });

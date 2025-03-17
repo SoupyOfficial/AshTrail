@@ -25,6 +25,28 @@ void main() {
         (WidgetTester tester) async {
       // Arrange - setup test environment
       await authHelper.setupUserAccounts();
+
+      // Mock user's Firestore data for account options screen
+      when(() => authHelper.providerContainer.container.read(any()))
+          .thenAnswer((_) {
+        return AsyncValue.data([
+          {
+            'userId': 'user-1',
+            'email': 'test1@example.com',
+            'firstName': 'Test User',
+            'hasUniqueName': true,
+            'authType': 'password'
+          },
+          {
+            'userId': 'user-2',
+            'email': 'test2@example.com',
+            'firstName': 'Test User 2',
+            'hasUniqueName': true,
+            'authType': 'password'
+          }
+        ]);
+      });
+
       authHelper.setupLoginSuccess(
           email: 'test1@example.com', password: 'password123');
       await authHelper.setupUserSwitchSuccess('test2@example.com');
@@ -32,9 +54,7 @@ void main() {
 
       // Mock initial user
       final mockUser = authHelper.createMockUser(
-          uid: 'user-1',
-          email: 'test1@example.com',
-          displayName: 'Test User 1');
+          uid: 'user-1', email: 'test1@example.com', firstName: 'Test User');
       when(() => authHelper.providerContainer.mockFirebaseAuth.currentUser)
           .thenReturn(mockUser);
 
@@ -80,9 +100,7 @@ void main() {
 
       // Mock second user for switching
       final mockUser2 = authHelper.createMockUser(
-          uid: 'user-2',
-          email: 'test2@example.com',
-          displayName: 'Test User 2');
+          uid: 'user-2', email: 'test2@example.com', firstName: 'Test User 2');
       when(() => authHelper.providerContainer.mockFirebaseAuth.currentUser)
           .thenReturn(mockUser2);
 

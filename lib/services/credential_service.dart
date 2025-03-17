@@ -110,8 +110,6 @@ class CredentialService {
   // Get all saved user accounts
   Future<List<Map<String, String>>> getUserAccounts() async {
     final accountsJson = await _secureStorage.read(key: _userAccountsKey);
-    debugPrint(
-        'CredentialService.getUserAccounts: raw JSON: ${accountsJson?.substring(0, min(100, accountsJson?.length ?? 0))}...');
     if (accountsJson == null) return [];
 
     try {
@@ -134,10 +132,10 @@ class CredentialService {
               })
           .toList();
 
-      debugPrint(
-          'CredentialService.getUserAccounts: found ${result.length} accounts');
-      debugPrint(
-          'CredentialService.getUserAccounts: account details: ${result.map((a) => "${a['email']}: displayName=${a['displayName']}, firstName=${a['firstName']}").join(', ')}');
+      // debugPrint(
+      //     'CredentialService.getUserAccounts: found ${result.length} accounts');
+      // debugPrint(
+      //     'CredentialService.getUserAccounts: account details: ${result.map((a) => "${a['email']}: displayName=${a['displayName']}, firstName=${a['firstName']}").join(', ')}');
 
       return result;
     } catch (e) {
@@ -240,6 +238,18 @@ class CredentialService {
     return account['userId'];
   }
 
+  Future<String?> getActiveUserEmail() async {
+    final activeUserId = await getActiveUserId();
+    if (activeUserId == null) return null;
+
+    final accounts = await getUserAccounts();
+    final account = accounts.firstWhere(
+      (account) => account['userId'] == activeUserId,
+      orElse: () => {},
+    );
+    return account['email'];
+  }
+
   // Add a utility method to clean up duplicate accounts
   Future<void> cleanupDuplicateAccounts() async {
     final accounts = await getUserAccounts();
@@ -269,6 +279,18 @@ class CredentialService {
 
       print(
           'Removed ${accounts.length - uniqueAccounts.length} duplicate accounts');
+    }
+  }
+
+  Future<void> clearActiveUser() async {
+    final activeUserId = await getActiveUserId();
+    final activeEmail = await getActiveUserEmail();
+    if (activeUserId != null) {
+      // Remove the active user's token
+      await _secureStorage.delete(key: _tokenPrefix + activeUserId);
+      // Clear the active user ID
+      await setActiveUser("");
+      debugPrint('Cleared active user: $activeEmail');
     }
   }
 }
