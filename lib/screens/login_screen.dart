@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +8,12 @@ import 'register_screen.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  final bool isAddingAccount;
+
+  const LoginScreen({
+    super.key,
+    this.isAddingAccount = false,
+  });
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -24,17 +30,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Check auth state using Riverpod
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(authStateProvider).whenData((user) {
-        if (user != null) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
+    // Only check auth state if not adding an account
+    if (!widget.isAddingAccount) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(authStateProvider).whenData((user) {
+          if (user != null) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+        });
       });
-    });
+    }
   }
 
   Future<void> _login() async {
@@ -90,8 +98,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
+      debugPrint('---------------------------------------------');
       debugPrint('Attempting Google Sign-In');
-      await ref.read(authServiceProvider).signInWithGoogle();
+      debugPrint('isAddingAccount: ${widget.isAddingAccount}');
+
+      final result = await ref.read(authServiceProvider).signInWithGoogle();
+
+      // Debug user info after sign-in
+      debugPrint('Google Sign-In successful');
+      debugPrint('User email: ${result.user?.email}');
+      debugPrint('User displayName: ${result.user?.displayName}');
+      debugPrint('User photoURL: ${result.user?.photoURL}');
+      debugPrint('Provider ID: ${result.credential?.providerId}');
+      debugPrint('---------------------------------------------');
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -121,9 +140,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _signInWithApple() async {
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
+
     try {
-      await ref.read(authServiceProvider).signInWithApple();
+      debugPrint('=============================================');
+      debugPrint('APPLE SIGN-IN DEBUG - LOGIN SCREEN');
+      debugPrint('isAddingAccount: ${widget.isAddingAccount}');
+      debugPrint(
+          'Platform: ${kIsWeb ? 'Web' : defaultTargetPlatform.toString()}');
+
+      final result = await ref.read(authServiceProvider).signInWithApple();
+
+      // Debug user info after sign-in
+      debugPrint('Apple Sign-In successful');
+      debugPrint('User email: ${result.user?.email}');
+      debugPrint('User displayName: ${result.user?.displayName}');
+      debugPrint('User photoURL: ${result.user?.photoURL}');
+      debugPrint('Provider ID: ${result.credential?.providerId}');
+
+      // Continue with navigation
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -181,7 +217,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(
+        title: Text(widget.isAddingAccount ? 'Add Account' : 'Login'),
+        leading: widget.isAddingAccount
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(

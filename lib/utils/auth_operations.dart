@@ -13,8 +13,26 @@ class AuthOperations {
   ) async {
     _showLoadingDialog(context, 'Switching accounts...');
 
+    debugPrint('---------------------------------------------');
+    debugPrint('Switching to account: $email');
+
     try {
+      // Get details before switch for comparison
+      final currentUser = ref.read(consolidated.authStateProvider).value;
+      debugPrint('Current user: ${currentUser?.email}');
+      debugPrint('Current displayName: ${currentUser?.displayName}');
+
       await ref.read(consolidated.authServiceProvider).switchAccount(email);
+
+      // Get details after switch for verification
+      final newUser = ref.read(consolidated.authStateProvider).value;
+      debugPrint('Switched successfully');
+      debugPrint('New user: ${newUser?.email}');
+      debugPrint('New displayName: ${newUser?.displayName}');
+
+      final userType = ref.read(consolidated.authTypeProvider);
+      debugPrint('New auth type: $userType');
+      debugPrint('---------------------------------------------');
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -25,6 +43,7 @@ class AuthOperations {
       return true;
     } catch (e) {
       debugPrint('Switch account error: $e');
+      debugPrint('---------------------------------------------');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to switch account: $e')),
@@ -32,10 +51,10 @@ class AuthOperations {
       }
       return false;
     } finally {
-      // if (context.mounted &&
-      //     Navigator.of(context, rootNavigator: true).canPop()) {
-      //   Navigator.of(context, rootNavigator: true).pop();
-      // }
+      if (context.mounted &&
+          Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
     }
   }
 
@@ -62,7 +81,28 @@ class AuthOperations {
 
     if (confirmed != true) return SignOutResult.fullySignedOut;
 
-    _showLoadingDialog(context, 'Signing out...');
+    // Store dialog context reference to ensure we can dismiss it later
+    BuildContext? dialogContext;
+
+    // Show loading dialog with a stored context reference
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          dialogContext = ctx; // Store the dialog context
+          return AlertDialog(
+            content: Row(
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 16),
+                const Text('Signing out...'),
+              ],
+            ),
+          );
+        },
+      );
+    }
 
     try {
       // Perform the logout operation
@@ -85,23 +125,40 @@ class AuthOperations {
           SnackBar(content: Text('Error signing out: $e')),
         );
       }
-      return SignOutResult
-          .fullySignedOut; // Default to fully signed out on error
+      return SignOutResult.fullySignedOut;
     } finally {
-      // if (context.mounted &&
-      //     Navigator.of(context, rootNavigator: true).canPop()) {
-      //   Navigator.of(context, rootNavigator: true).pop();
-      // }
+      // Safely close the dialog using the stored context
+      try {
+        if (dialogContext != null &&
+            (context.mounted || dialogContext!.mounted)) {
+          Navigator.of(dialogContext!).pop();
+        }
+      } catch (e) {
+        debugPrint('Error closing dialog: $e');
+      }
+
+      // Refresh all auth-related providers with delay to prevent crash
+      Future.microtask(() {
+        try {
+          _refreshAuthProviders(ref);
+        } catch (e) {
+          debugPrint('Error refreshing providers: $e');
+        }
+      });
     }
   }
 
   // Helper to refresh all auth-related providers
   static void _refreshAuthProviders(WidgetRef ref) {
-    ref.invalidate(consolidated.userAccountsProvider);
-    ref.invalidate(consolidated.enrichedAccountsProvider);
-    ref.invalidate(consolidated.authStateProvider);
-    ref.invalidate(consolidated.authTypeProvider);
-    ref.invalidate(consolidated.activeAccountProvider);
+    try {
+      ref.invalidate(consolidated.userAccountsProvider);
+      ref.invalidate(consolidated.enrichedAccountsProvider);
+      ref.invalidate(consolidated.authStateProvider);
+      ref.invalidate(consolidated.authTypeProvider);
+      ref.invalidate(consolidated.activeAccountProvider);
+    } catch (e) {
+      debugPrint('Error during provider refresh: $e');
+    }
   }
 
   // Helper to show a loading dialog

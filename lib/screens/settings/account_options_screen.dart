@@ -104,16 +104,29 @@ class AccountOptionsScreen extends ConsumerWidget {
               style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
             onTap: () async {
-              final result = await AuthOperations.logout(context, ref);
+              try {
+                final result = await AuthOperations.logout(context, ref);
+                debugPrint('Logout result: $result');
 
-              debugPrint('Logout result: $result');
-
-              // Navigate to the login screen only if fully signed out
-              if (result == SignOutResult.fullySignedOut && context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
+                // Navigate to the login screen only if fully signed out
+                if (result == SignOutResult.fullySignedOut && context.mounted) {
+                  // Use a delay to ensure all cleanup is done before navigation
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
+                }
+              } catch (e) {
+                debugPrint('Error during logout: $e');
+                // Show error to user
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Logout error: $e')),
+                  );
+                }
               }
             },
           ),

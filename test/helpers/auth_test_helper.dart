@@ -4,407 +4,241 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:smoke_log/providers/auth_provider.dart';
-import 'package:smoke_log/services/credential_service.dart';
+import 'package:smoke_log/providers/auth_provider.dart' as authProvider;
+import 'package:smoke_log/providers/consolidated_auth_provider.dart'
+    as consolidated;
+import 'package:smoke_log/providers/user_account_provider.dart';
 import 'package:smoke_log/screens/login_screen.dart';
 import 'package:smoke_log/screens/home_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../unit/services/auth_account_service_test.dart' as auth_account;
-import 'mock_providers.dart';
+import 'package:smoke_log/services/auth_service.dart';
+import 'package:smoke_log/services/credential_service.dart';
+
+// Mock classes
+class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class MockUser extends Mock implements User {}
+
+class MockUserCredential extends Mock implements UserCredential {}
+
+class MockAuthCredential extends Mock implements AuthCredential {}
+
+class MockAuthService extends Mock implements AuthService {
+  Future<UserCredential> login(
+      {required String email, required String password}) async {
+    // Mock implementation for login
+    throw UnimplementedError();
+  }
+}
+
+class MockCredentialService extends Mock implements CredentialService {}
+
+// Container to hold all provider mocks and containers
+class ProviderMocksContainer {
+  final MockFirebaseAuth mockFirebaseAuth;
+  final MockAuthService mockAuthService;
+  final MockCredentialService mockCredentialService;
+  final ProviderContainer container;
+
+  ProviderMocksContainer({
+    required this.mockFirebaseAuth,
+    required this.mockAuthService,
+    required this.mockCredentialService,
+    required this.container,
+  });
+}
 
 class AuthTestHelper {
-  late TestProviderContainer providerContainer;
-  late MockFirestore mockFirestore;
-
-  // Mock user accounts for testing
-  final List<Map<String, String>> _testAccounts = [
-    {
-      'userId': 'user-1',
-      'email': 'test1@example.com',
-      'firstName': 'Test',
-      'lastName': 'User',
-      'authType': 'password',
-      'password': 'password123'
-    },
-    {
-      'userId': 'user-2',
-      'email': 'test2@example.com',
-      'firstName': 'User2',
-      'lastName': 'User2',
-      'authType': 'password',
-      'password': 'password123'
-    },
-    {
-      'userId': 'user-3',
-      'email': 'test3@example.com',
-      'firstName': 'Google',
-      'lastName': 'User',
-      'authType': 'google',
-      'password': ''
-    }
-  ];
-
-  Future<List<Map<String, String>>> getUserAccounts() async => _testAccounts;
-
-  Future<Map<String, String>> getFirstUser() async => _testAccounts.first;
+  late ProviderMocksContainer providerContainer;
+  final List<StreamController> _controllers = [];
 
   AuthTestHelper() {
-    providerContainer = TestProviderContainer();
-    mockFirestore = MockFirestore();
+    final mockFirebaseAuth = MockFirebaseAuth();
+    final mockAuthService = MockAuthService();
+    final mockCredentialService = MockCredentialService();
+
+    // Setup default when() for common methods
+    when(() => mockCredentialService.getUserAccounts())
+        .thenAnswer((_) async => []);
+
+    final container = ProviderContainer(
+      overrides: [
+        // Legacy
+        authProvider.firebaseAuthProvider.overrideWithValue(mockFirebaseAuth),
+        authProvider.authServiceProvider.overrideWithValue(mockAuthService),
+        authProvider.credentialServiceProvider
+            .overrideWithValue(mockCredentialService),
+
+        // Consolidated
+        consolidated.firebaseAuthProvider.overrideWithValue(mockFirebaseAuth),
+        consolidated.authServiceProvider.overrideWithValue(mockAuthService),
+        consolidated.credentialServiceProvider
+            .overrideWithValue(mockCredentialService),
+      ],
+    );
+
+    providerContainer = ProviderMocksContainer(
+      mockFirebaseAuth: mockFirebaseAuth,
+      mockAuthService: mockAuthService,
+      mockCredentialService: mockCredentialService,
+      container: container,
+    );
   }
 
-  // Create a test user with both Auth data and Firestore data
-  auth_account.MockUser createMockUser({
-    String uid = 'user-1',
+  // Helper to create a mock user with specific attributes
+  MockUser createMockUser({
+    String uid = 'test-uid',
     String email = 'test@example.com',
-    String firstName = 'Test User',
-    String? lastName,
+    String? firstName,
   }) {
-    final mockUser = auth_account.MockUser();
-
-    // Setup Firebase Auth user properties
+    final mockUser = MockUser();
     when(() => mockUser.uid).thenReturn(uid);
     when(() => mockUser.email).thenReturn(email);
 
-    // Firebase Auth User might have displayName (but our app uses firstName from Firestore)
-    final displayName =
-        [firstName, lastName].where((s) => s != null && s.isNotEmpty).join(' ');
-    when(() => mockUser.displayName).thenReturn(displayName);
+    // Setup displayName if firstName provided
+    if (firstName != null) {
+      when(() => mockUser.displayName).thenReturn('$firstName User');
+    }
 
-    // Always set up the auth state stream when creating a mock user
-    final controller = StreamController<User?>.broadcast();
-    controller.add(mockUser);
-    when(() => providerContainer.mockFirebaseAuth.authStateChanges())
-        .thenAnswer((_) => controller.stream);
-
-    // Setup mock Firestore document for this user
-    final mockDocSnapshot = MockDocumentSnapshot<Map<String, dynamic>>();
-    final mockUserDoc = MockDocumentReference<Map<String, dynamic>>();
-
-    // Mock data that would be in the Firestore document
-    final userData = {
-      'email': email,
-      'firstName': firstName,
-      'lastName': lastName,
-      'createdAt': Timestamp.now(),
-      'lastLoginAt': Timestamp.now(),
-      'isActive': true,
-    };
-
-    when(() => mockDocSnapshot.data()).thenReturn(userData);
-    when(() => mockDocSnapshot.exists).thenReturn(true);
-    when(() => mockDocSnapshot.id).thenReturn(uid);
-
-    when(() => mockUserDoc.get()).thenAnswer((_) async => mockDocSnapshot);
-    when(() => mockFirestore.collection('users').doc(uid))
-        .thenReturn(mockUserDoc);
+    // Setup empty provider data by default
+    when(() => mockUser.providerData).thenReturn([]);
 
     return mockUser;
   }
 
   // Setup user accounts for testing
-  Future<void> setupUserAccounts() async {
-    // Convert test accounts to the format expected by CredentialService
-    final accounts = _testAccounts
-        .map((account) => {
-              'userId': account['userId'],
-              'email': account['email'],
-              'firstName': account['firstName'],
-              'authType': account['authType'],
-              if (account['password'] != null) 'password': account['password'],
-            })
-        .toList();
+  Future<List<Map<String, String>>> setupUserAccounts() async {
+    final userAccounts = [
+      {
+        'userId': 'user-1',
+        'email': 'test1@example.com',
+        'authType': 'password'
+      },
+      {'userId': 'user-2', 'email': 'test2@example.com', 'authType': 'password'}
+    ];
 
-    // Mock credential service to return these accounts
     when(() => providerContainer.mockCredentialService.getUserAccounts())
-        .thenAnswer((_) async => accounts.cast<Map<String, String>>());
+        .thenAnswer((_) async => userAccounts
+            .map((account) => Map<String, String>.from(account))
+            .toList());
 
-    // Set first user as active
-    when(() => providerContainer.mockCredentialService.getActiveUserId())
-        .thenAnswer((_) async => accounts.first['userId']);
-
-    // Setup mock Firestore documents for each account
-    for (final account in _testAccounts) {
-      final uid = account['userId']!;
-      final email = account['email']!;
-      final firstName = account['firstName']!;
-
-      final mockDocSnapshot = MockDocumentSnapshot<Map<String, dynamic>>();
-      final mockUserDoc = MockDocumentReference<Map<String, dynamic>>();
-
-      final userData = {
-        'email': email,
-        'firstName': firstName,
-        'createdAt': Timestamp.now(),
-        'lastLoginAt': Timestamp.now(),
-        'isActive': true,
-      };
-
-      when(() => mockDocSnapshot.data()).thenReturn(userData);
-      when(() => mockDocSnapshot.exists).thenReturn(true);
-      when(() => mockDocSnapshot.id).thenReturn(uid);
-
-      when(() => mockUserDoc.get()).thenAnswer((_) async => mockDocSnapshot);
-      when(() => mockFirestore.collection('users').doc(uid))
-          .thenReturn(mockUserDoc);
-    }
+    return userAccounts
+        .map((account) => Map<String, String>.from(account))
+        .toList();
   }
 
-  // Setup for login success
+  // Set active user for testing
+  Future<MockUser> setActiveUser(String email) async {
+    final mockUser = createMockUser(email: email);
+
+    // Set as current Firebase user
+    when(() => providerContainer.mockFirebaseAuth.currentUser)
+        .thenReturn(mockUser);
+
+    // Create auth state stream
+    final controller = StreamController<User?>.broadcast();
+    controller.add(mockUser);
+    _controllers.add(controller);
+
+    when(() => providerContainer.mockFirebaseAuth.authStateChanges())
+        .thenAnswer((_) => controller.stream);
+
+    return mockUser;
+  }
+
+  // Setup login success for testing
   void setupLoginSuccess(
       {String email = 'test@example.com', String password = 'password123'}) {
     final mockUser = createMockUser(email: email);
     final mockCredential = MockUserCredential();
 
     when(() => mockCredential.user).thenReturn(mockUser);
+
     when(() => providerContainer.mockFirebaseAuth.signInWithEmailAndPassword(
           email: email,
           password: password,
         )).thenAnswer((_) async => mockCredential);
 
-    when(() => providerContainer.mockAuthService.signInWithEmailAndPassword(
-          email,
-          password,
-        )).thenAnswer((_) async => mockCredential);
-
-    // Setup auth state changes
-    final controller = StreamController<User?>();
-    when(() => providerContainer.mockFirebaseAuth.authStateChanges())
-        .thenAnswer((_) => controller.stream);
-
-    // Emit the user to simulate successful login
-    controller.add(mockUser);
-  }
-
-  // Setup for login failure
-  void setupLoginFailure(
-      {String email = 'test@example.com', String password = 'wrongpassword'}) {
-    when(() => providerContainer.mockFirebaseAuth.signInWithEmailAndPassword(
+    when(() => providerContainer.mockAuthService.login(
           email: email,
           password: password,
-        )).thenThrow(FirebaseAuthException(code: 'wrong-password'));
-
-    when(() => providerContainer.mockAuthService.signInWithEmailAndPassword(
-          email,
-          password,
-        )).thenThrow(FirebaseAuthException(code: 'wrong-password'));
+        )).thenAnswer((_) async => mockCredential);
   }
 
-  // Setup for successful user switching
-  Future<void> setupUserSwitchSuccess(String targetEmail) async {
-    // Find the target account
-    final targetAccount = _testAccounts.firstWhere(
-      (account) => account['email'] == targetEmail,
-      orElse: () => _testAccounts.first,
-    );
+  // Setup login failure for testing
+  void setupLoginFailure() {
+    when(() => providerContainer.mockFirebaseAuth.signInWithEmailAndPassword(
+          email: any(named: 'email'),
+          password: any(named: 'password'),
+        )).thenThrow(Exception('Wrong password'));
 
-    // Create a mock user for the target
-    final mockUser = createMockUser(
-      uid: targetAccount['userId'] as String,
-      email: targetEmail,
-      firstName: targetAccount['firstName'] as String,
-    );
-
-    // Mock the switch account functionality
-    when(() => providerContainer.mockAuthService.switchAccount(targetEmail))
-        .thenAnswer((_) async {
-      // Emit the new user to auth state
-      final controller = StreamController<User?>();
-      when(() => providerContainer.mockFirebaseAuth.authStateChanges())
-          .thenAnswer((_) => controller.stream);
-      controller.add(mockUser);
-
-      // Update the active user ID
-      when(() => providerContainer.mockCredentialService.getActiveUserId())
-          .thenAnswer((_) async => targetAccount['userId']);
-
-      // Update current user
-      when(() => providerContainer.mockFirebaseAuth.currentUser)
-          .thenReturn(mockUser);
-    });
+    when(() => providerContainer.mockAuthService.login(
+          email: any(named: 'email'),
+          password: any(named: 'password'),
+        )).thenThrow(Exception('Wrong password'));
   }
 
-  // Setup for user sign out
+  // Setup sign out for testing
   void setupSignOut() {
     when(() => providerContainer.mockFirebaseAuth.signOut())
-        .thenAnswer((_) async {});
-    when(() => providerContainer.mockAuthService.signOut())
-        .thenAnswer((_) async {});
-
-    // Update auth state to emit null after sign out
-    final controller = StreamController<User?>();
-    when(() => providerContainer.mockFirebaseAuth.authStateChanges())
-        .thenAnswer((_) => controller.stream);
-    controller.add(null);
-
-    // Update current user to null
-    when(() => providerContainer.mockFirebaseAuth.currentUser).thenReturn(null);
-  }
-
-  // Setup for user sign out and account switching
-  void setupSignOutAndSwitch() {
-    when(() => providerContainer.mockFirebaseAuth.signOut())
-        .thenAnswer((_) async {});
-    when(() => providerContainer.mockAuthService.signOut())
-        .thenAnswer((_) async {});
-
-    // Mock credential service behavior
-    when(() => providerContainer.mockCredentialService.getUserAccounts())
-        .thenAnswer((_) async => [
-              {
-                'email': 'another@example.com',
-                'userId': 'user-3',
-                'authType': 'password',
-                'password': 'password123'
-              },
-              {
-                'email': 'test@example.com',
-                'userId': 'user-1',
-                'authType': 'password',
-                'password': 'password123'
-              },
-            ]);
-
-    when(() => providerContainer.mockCredentialService.setActiveUser(any()))
         .thenAnswer((_) async => {});
 
-    when(() => providerContainer.mockCredentialService.getAccountDetails(any()))
-        .thenAnswer((invocation) async {
-      final email = invocation.positionalArguments[0];
-      if (email == 'another@example.com') {
-        return {
-          'email': 'another@example.com',
-          'userId': 'user-3',
-          'authType': 'password',
-          'password': 'password123'
-        };
-      }
-      return null;
-    });
+    when(() => providerContainer.mockAuthService.signOut())
+        .thenAnswer((_) async => SignOutResult.fullySignedOut);
+  }
 
-    // Create a mock user for the next account
-    final mockNextUser = auth_account.MockUser();
-    when(() => mockNextUser.email).thenReturn('another@example.com');
-    when(() => mockNextUser.uid).thenReturn('user-3');
+  // Setup sign out and switch to another user
+  void setupSignOutAndSwitch() {
+    when(() => providerContainer.mockFirebaseAuth.signOut())
+        .thenAnswer((_) async => {});
 
-    // Mock the sign in process for the next account
+    // New SignOutResult enum return type
+    when(() => providerContainer.mockAuthService.signOut())
+        .thenAnswer((_) async => SignOutResult.switchedToAnotherUser);
+
+    // Setup subsequent sign in
+    final mockUser = createMockUser(email: 'another@example.com');
+    final mockCredential = MockUserCredential();
+    when(() => mockCredential.user).thenReturn(mockUser);
+
     when(() => providerContainer.mockFirebaseAuth.signInWithEmailAndPassword(
-            email: 'another@example.com', password: 'password123'))
-        .thenAnswer((_) async => auth_account.MockUserCredential(mockNextUser));
-
-    // Update auth state to emit the next user after sign in
-    final controller = StreamController<User?>();
-    when(() => providerContainer.mockFirebaseAuth.authStateChanges())
-        .thenAnswer((_) => controller.stream);
-    controller.add(mockNextUser);
-
-    // Update current user to the next one
-    when(() => providerContainer.mockFirebaseAuth.currentUser)
-        .thenReturn(mockNextUser);
+          email: 'another@example.com',
+          password: 'password123',
+        )).thenAnswer((_) async => mockCredential);
   }
 
-  // Setup for account deletion
-  void setupAccountDeletion() {
-    // Create a mock user to delete
-    final mockUser = auth_account.MockUser();
-    when(() => mockUser.email).thenReturn('test@example.com');
-    when(() => mockUser.uid).thenReturn('user-1');
-
-    // Mock current user
-    when(() => providerContainer.mockFirebaseAuth.currentUser)
-        .thenReturn(mockUser);
-
-    // Mock reauthentication
-    final credential = auth_account.MockAuthCredential();
-    when(() => EmailAuthProvider.credential(
-        email: 'test@example.com',
-        password: 'password123')).thenReturn(credential);
-
-    when(() => mockUser.reauthenticateWithCredential(credential))
-        .thenAnswer((_) async => auth_account.MockUserCredential());
-
-    // Mock deletion
-    when(() => mockUser.delete()).thenAnswer((_) async {});
-
-    // Mock credential service
-    when(() => providerContainer.mockCredentialService
-        .removeUserAccount('test@example.com')).thenAnswer((_) async {});
+  // Setup user switching success for testing with updated return type
+  Future<void> setupUserSwitchSuccess(String email) async {
+    when(() => providerContainer.mockAuthService.switchAccount(email))
+        .thenAnswer((_) async => {});
   }
 
-  // Set a specific user as active based on email or userId
-  Future<auth_account.MockUser> setActiveUser(String identifier) async {
-    // Find the user in test accounts (by email or userId)
-    final account = _testAccounts.firstWhere(
-      (account) =>
-          account['email'] == identifier || account['userId'] == identifier,
-      orElse: () => throw Exception('User not found: $identifier'),
-    );
-
-    // Create a mock user for this account
-    final mockUser = createMockUser(
-      uid: account['userId']!,
-      email: account['email']!,
-      firstName: account['firstName']!,
-      lastName: account['lastName'],
-    );
-
-    // Set as current user in Firebase Auth
-    when(() => providerContainer.mockFirebaseAuth.currentUser)
-        .thenReturn(mockUser);
-
-    // Update the auth state stream
-    final authStateController = StreamController<User?>.broadcast();
-    authStateController.add(mockUser);
-    when(() => providerContainer.mockFirebaseAuth.authStateChanges())
-        .thenAnswer((_) => authStateController.stream);
-
-    // Set as active user in credential service
-    when(() => providerContainer.mockCredentialService.getActiveUserId())
-        .thenAnswer((_) async => account['userId']);
-
-    return mockUser;
+  // Get user accounts from mock
+  Future<List<Map<String, String>>> getUserAccounts() {
+    return providerContainer.mockCredentialService.getUserAccounts();
   }
 
-  // Get user account by email or userId
-  Map<String, String> getTestAccount(String identifier) {
-    return _testAccounts.firstWhere(
-      (account) =>
-          account['email'] == identifier || account['userId'] == identifier,
-      orElse: () => throw Exception('Test account not found: $identifier'),
-    );
-  }
-
+  // Build login screen for testing
   Widget buildLoginScreen() {
     return ProviderScope(
       parent: providerContainer.container,
-      child: MaterialApp(
-        home: const LoginScreen(),
-      ),
+      child: const MaterialApp(home: LoginScreen()),
     );
   }
 
+  // Build home screen for testing
   Widget buildHomeScreen() {
     return ProviderScope(
       parent: providerContainer.container,
-      child: MaterialApp(
-        home: const HomeScreen(),
-      ),
+      child: const MaterialApp(home: HomeScreen()),
     );
   }
 
+  // Clean up resources
   void dispose() {
-    providerContainer.dispose();
+    for (final controller in _controllers) {
+      controller.close();
+    }
+    _controllers.clear();
+    providerContainer.container.dispose();
   }
 }
-
-// Add these mock classes to support Firestore document mocking
-class MockFirestore extends Mock implements FirebaseFirestore {}
-
-class MockDocumentReference<T extends Object?> extends Mock
-    implements DocumentReference<T> {}
-
-class MockDocumentSnapshot<T extends Object?> extends Mock
-    implements DocumentSnapshot<T> {}
-
-class MockCollectionReference<T extends Object?> extends Mock
-    implements CollectionReference<T> {}

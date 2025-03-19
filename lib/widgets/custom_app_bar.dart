@@ -50,12 +50,12 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar> {
 
   Future<void> _handleAccountSelection(String email) async {
     if (email == 'Add Account') {
-      // Sign out then redirect to the login screen
-      await _signOut();
+      // Navigate to login screen to add a new account WITHOUT signing out
       if (mounted) {
-        Navigator.pushReplacement(
+        Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          MaterialPageRoute(
+              builder: (context) => const LoginScreen(isAddingAccount: true)),
         );
       }
     } else {

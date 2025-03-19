@@ -187,6 +187,7 @@ class AuthService implements IAuthService {
     }
   }
 
+  @override
   Future<UserCredential> signInWithEmailAndPassword(
     String email,
     String password,
@@ -222,6 +223,7 @@ class AuthService implements IAuthService {
     }
   }
 
+  @override
   Future<UserCredential> signInWithGoogle() async {
     try {
       debugPrint('Attempting Google sign-in');
@@ -258,6 +260,7 @@ class AuthService implements IAuthService {
     }
   }
 
+  @override
   Future<UserCredential> signInWithApple() async {
     try {
       debugPrint('Attempting Apple sign-in');
@@ -425,6 +428,7 @@ class AuthService implements IAuthService {
     }
   }
 
+  @override
   Future<void> switchAccount(String email) async {
     try {
       debugPrint('Switching to account: $email');

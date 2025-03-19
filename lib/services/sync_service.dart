@@ -78,8 +78,16 @@ class SyncService {
   }
 
   void dispose() {
-    stopPeriodicSync();
-    _syncStatusController.close();
+    // Ensure the periodic sync timer is canceled
+    if (_syncTimer != null) {
+      _syncTimer!.cancel();
+      _syncTimer = null;
+    }
+
+    // Close the sync status stream controller
+    if (!_syncStatusController.isClosed) {
+      _syncStatusController.close();
+    }
   }
 }
 
