@@ -8,7 +8,7 @@ import './firebase_providers.dart'; // Add this import
 // Repository provider with Firebase initialization
 final logRepositoryProvider = Provider<LogRepository>((ref) {
   // Wait for Firebase to be initialized
-  final isInitialized = ref.watch(firebaseInitializerProvider);
+  final isInitialized = ref.watch(firebaseInitializerProvider).value ?? false;
   final authState = ref.watch(authStateProvider);
 
   return authState.when(
