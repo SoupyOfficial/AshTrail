@@ -29,9 +29,9 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
     final userProfile = await ref.read(userProfileProvider.future);
     if (userProfile != null && mounted) {
       setState(() {
-        _firstNameController.text = userProfile.firstName;
+        _firstNameController.text = userProfile.firstName ?? '';
         _lastNameController.text = userProfile.lastName ?? '';
-        _emailController.text = userProfile.email;
+        _emailController.text = userProfile.email ?? '';
       });
     }
   }

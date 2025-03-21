@@ -41,9 +41,10 @@ class _EditLogScreenState extends ConsumerState<EditLogScreen> {
     _durationController = TextEditingController(
         text: formatSecondsDisplay(widget.log.durationSeconds));
     _notesController = TextEditingController(text: widget.log.notes ?? '');
-    _timestamp = widget.log.timestamp;
-    _moodRating = widget.log.moodRating;
-    _physicalRating = widget.log.physicalRating;
+    // Set timestamp with fallback to current time if null
+    _timestamp = widget.log.timestamp ?? DateTime.now();
+    _moodRating = widget.log.moodRating ?? -1;
+    _physicalRating = widget.log.physicalRating ?? -1;
     _potencyRating = widget.log.potencyRating != null
         ? (widget.log.potencyRating! / 5.0).clamp(0.25, 2.0)
         : 1.0;

@@ -62,7 +62,9 @@ class AccountOptionsScreen extends ConsumerWidget {
                       subtitle: isCurrentAccount
                           ? const Text('Current Account',
                               style: TextStyle(color: Colors.green))
-                          : (hasUniqueName ? Text(email) : null),
+                          : (hasUniqueName && email != 'Unknown'
+                              ? Text(email)
+                              : null),
                       trailing: isCurrentAccount
                           ? null
                           : IconButton(

@@ -23,7 +23,7 @@ class InfoDisplay extends StatelessWidget {
     final thcValue = liveThcContent ?? 0.0;
     final basicThcValue = liveBasicThcContent ?? 0.0;
 
-    // If no last hit is available, default to a zero Duration
+    // If no last hit is available, default to current time (showing 0 duration since)
     final lastHitTime = aggregates.lastHit ?? DateTime.now();
     final timeSinceLastHit = DateTime.now().difference(lastHitTime);
 

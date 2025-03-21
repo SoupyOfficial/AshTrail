@@ -157,7 +157,7 @@ class UserProfileService {
     int logCount = 0;
     try {
       final countQuery = await _firestore.collection(logPath).count().get();
-      logCount = countQuery.count!;
+      logCount = countQuery.count ?? 0;
     } catch (e) {
       print('Error getting log count: $e');
     }
@@ -173,9 +173,20 @@ class UserProfileService {
 
       if (firstLogQuery.docs.isNotEmpty &&
           firstLogQuery.docs.first.data().containsKey('timestamp')) {
-        firstLogDate =
-            (firstLogQuery.docs.first.data()['timestamp'] as Timestamp)
-                .toDate();
+        // Safely convert to DateTime with fallback
+        final timestampData = firstLogQuery.docs.first.data()['timestamp'];
+        if (timestampData is Timestamp) {
+          firstLogDate = timestampData.toDate();
+        } else {
+          // Try to parse as DateTime, or use default date
+          try {
+            firstLogDate = timestampData is DateTime
+                ? timestampData
+                : DateTime.parse(timestampData.toString());
+          } catch (_) {
+            // Use null - caller will handle formatting
+          }
+        }
       }
     } catch (e) {
       print('Error getting first log date: $e');

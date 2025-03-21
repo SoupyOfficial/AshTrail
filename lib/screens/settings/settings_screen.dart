@@ -26,10 +26,10 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   leading: const CircleAvatar(child: Icon(Icons.person)),
                   title: Text(
-                    '${profile.firstName} ${profile.lastName ?? ''}',
+                    '${profile.firstName ?? 'User'} ${profile.lastName ?? ''}',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  subtitle: Text(profile.email),
+                  subtitle: Text(profile.email ?? 'No email address'),
                 ),
               const Divider(),
               ListTile(

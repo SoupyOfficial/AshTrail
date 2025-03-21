@@ -22,8 +22,13 @@ List<FlSpot> defaultDataProcessor(List<Log> logs, ChartRange range) {
       startRange = now.subtract(const Duration(days: 365));
       break;
   }
-  final filteredLogs =
-      logs.where((log) => !log.timestamp.isBefore(startRange)).toList();
+
+  // Filter out logs with null timestamps and then filter by range
+  final filteredLogs = logs
+      .where((log) => log.timestamp != null) // Ensure timestamp isn't null
+      .where((log) => !log.timestamp.isBefore(startRange))
+      .toList();
+
   return filteredLogs
       .map((log) => FlSpot(
             log.timestamp.millisecondsSinceEpoch.toDouble(),

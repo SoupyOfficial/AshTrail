@@ -28,12 +28,17 @@ class Log {
     } else if (timestamp is DateTime) {
       return timestamp;
     } else if (timestamp is String) {
-      return DateTime.parse(timestamp);
+      try {
+        return DateTime.parse(timestamp);
+      } catch (_) {
+        return DateTime.now(); // Fallback if string parsing fails
+      }
     } else if (timestamp is int) {
       return DateTime.fromMillisecondsSinceEpoch(timestamp);
     }
-    // Default fallback
-    return DateTime.now();
+    // Default fallback to a specific date rather than current time
+    // Using epoch start as a clear "default" date
+    return DateTime(1970, 1, 1);
   }
 
   factory Log.fromMap(Map<String, dynamic> map, String? docId) {

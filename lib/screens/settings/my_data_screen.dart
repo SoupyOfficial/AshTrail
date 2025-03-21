@@ -261,7 +261,8 @@ class _MyDataScreenState extends ConsumerState<MyDataScreen> {
                 data: (stats) {
                   final logCount = stats['logCount'] ?? 0;
                   final firstLogDate = stats['firstLogDate'] as DateTime?;
-                  final totalDuration = stats['totalDuration'] as double? ?? 0;
+                  final totalDuration =
+                      stats['totalDuration'] as double? ?? 0.0;
 
                   // Format information with null safety
                   final formattedFirstLog = firstLogDate != null
@@ -273,11 +274,13 @@ class _MyDataScreenState extends ConsumerState<MyDataScreen> {
                   final durationMinutes = ((totalDuration % 3600) / 60).floor();
                   final durationSeconds = (totalDuration % 60).floor();
 
-                  final formattedDuration = durationHours > 0
-                      ? '${durationHours}h ${durationMinutes}m ${durationSeconds}s'
-                      : durationMinutes > 0
-                          ? '${durationMinutes}m ${durationSeconds}s'
-                          : '${durationSeconds}s';
+                  final formattedDuration = totalDuration <= 0
+                      ? '0s'
+                      : durationHours > 0
+                          ? '${durationHours}h ${durationMinutes}m ${durationSeconds}s'
+                          : durationMinutes > 0
+                              ? '${durationMinutes}m ${durationSeconds}s'
+                              : '${durationSeconds}s';
 
                   return Card(
                     child: Padding(
