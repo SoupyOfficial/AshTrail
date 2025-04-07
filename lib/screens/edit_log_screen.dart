@@ -331,27 +331,27 @@ class _EditLogScreenState extends ConsumerState<EditLogScreen> {
                       const SizedBox(height: 16),
 
                       // Potency rating
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                              'Potency strength: ${_potencyRating.toStringAsFixed(2)}'),
-                          Slider(
-                            value: _potencyRating,
-                            min: 0.25,
-                            max: 2.0,
-                            divisions:
-                                7, // Creates steps: 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0
-                            label: _potencyRating.toStringAsFixed(2),
-                            onChanged: (value) {
-                              setState(() {
-                                _potencyRating = value;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                      // Column(
+                      //   crossAxisAlignment: CrossAxisAlignment.start,
+                      //   children: [
+                      //     Text(
+                      //         'Potency strength: ${_potencyRating.toStringAsFixed(2)}'),
+                      //     Slider(
+                      //       value: _potencyRating,
+                      //       min: 0.25,
+                      //       max: 2.0,
+                      //       divisions:
+                      //           7, // Creates steps: 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0
+                      //       label: _potencyRating.toStringAsFixed(2),
+                      //       onChanged: (value) {
+                      //         setState(() {
+                      //           _potencyRating = value;
+                      //         });
+                      //       },
+                      //     ),
+                      //   ],
+                      // ),
+                      // const SizedBox(height: 16),
 
                       // Notes field with keyboard dismiss button
                       Column(
