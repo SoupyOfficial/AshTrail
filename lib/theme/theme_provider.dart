@@ -5,6 +5,7 @@ import '../services/user_theme_service.dart';
 class ThemeProvider with ChangeNotifier {
   bool _isDarkMode = false;
   Color _accentColor = Colors.blue;
+  bool _isInitialized = false;
 
   final UserThemeService _themeService;
   final FirebaseAuth _auth;
@@ -15,7 +16,7 @@ class ThemeProvider with ChangeNotifier {
     FirebaseAuth? auth,
   })  : _themeService = themeService ?? UserThemeService(),
         _auth = auth ?? FirebaseAuth.instance {
-    _loadThemePreference();
+    _initializeTheme();
 
     // Listen for auth state changes
     _auth.authStateChanges().listen((User? user) {
@@ -27,11 +28,28 @@ class ThemeProvider with ChangeNotifier {
         _loadThemePreference();
       }
     });
+
+    // Listen for theme changes from background sync
+    _themeService.onThemeChanged.listen((_) {
+      _loadThemePreference();
+    });
   }
 
   bool get isDarkMode => _isDarkMode;
   Color get accentColor => _accentColor;
   ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
+  bool get isInitialized => _isInitialized;
+
+  /// Initialize theme synchronously as much as possible
+  void _initializeTheme() async {
+    // Set a default immediately to avoid flickering
+    _isDarkMode = false;
+    _accentColor = Colors.blue;
+
+    // Then load preferences as soon as possible
+    await _loadThemePreference();
+    _isInitialized = true;
+  }
 
   /// Explicitly reload theme preferences from storage
   /// This is useful after user account switches
@@ -42,10 +60,15 @@ class ThemeProvider with ChangeNotifier {
   Future<void> _loadThemePreference() async {
     final themeSettings = await _themeService.loadThemeSettings();
 
-    _isDarkMode = themeSettings['isDarkMode'] ?? false;
-    _accentColor = themeSettings['accentColor'] ?? Colors.blue;
+    final newIsDarkMode = themeSettings['isDarkMode'] ?? false;
+    final newAccentColor = themeSettings['accentColor'] ?? Colors.blue;
 
-    notifyListeners();
+    // Only notify if theme actually changed
+    if (newIsDarkMode != _isDarkMode || newAccentColor != _accentColor) {
+      _isDarkMode = newIsDarkMode;
+      _accentColor = newAccentColor;
+      notifyListeners();
+    }
   }
 
   Future<void> toggleTheme() async {
