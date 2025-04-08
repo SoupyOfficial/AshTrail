@@ -9,6 +9,8 @@ import 'credential_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'interfaces/auth_service_interface.dart';
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 // Provide credential service
 final credentialServiceProvider = Provider<CredentialService>((ref) {
@@ -168,6 +170,60 @@ class AuthService implements IAuthService {
   AuthService(
       this._auth, this._googleSignIn, this._credentialService, this._ref);
 
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+
+  // Key format for storing OAuth tokens: 'oauth_token_{email}'
+  String _getTokenKey(String email) => 'oauth_token_${email.toLowerCase()}';
+
+  // Store OAuth credentials when user signs in
+  Future<void> _storeOAuthCredential(
+      UserCredential credential, String provider) async {
+    final user = credential.user;
+    if (user == null || user.email == null) return;
+
+    final email = user.email!;
+    final authCredential = credential.credential;
+
+    if (authCredential == null) {
+      debugPrint('No credential available to store for $email');
+      return;
+    }
+
+    Map<String, dynamic> tokenData = {
+      'provider': provider,
+    };
+
+    // For Google sign-in
+    if (provider == 'google') {
+      // Ensure we store all token values as strings
+      tokenData['accessToken'] = authCredential.accessToken?.toString();
+      tokenData['idToken'] = authCredential.token?.toString();
+      debugPrint('Prepared Google token data for storage');
+    }
+    // For Apple sign-in
+    else if (provider == 'apple') {
+      tokenData['identityToken'] = authCredential.token?.toString();
+      tokenData['authorizationCode'] = authCredential.accessToken?.toString();
+      debugPrint('Prepared Apple token data for storage');
+    }
+
+    // Store the token using the CredentialService
+    await _credentialService.storeOAuthToken(email, tokenData);
+  }
+
+  // Retrieve stored credentials
+  Future<Map<String, dynamic>?> _getStoredCredential(String email) async {
+    final tokenJson = await _secureStorage.read(key: _getTokenKey(email));
+    if (tokenJson == null) return null;
+
+    try {
+      return jsonDecode(tokenJson) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('Error parsing stored credential: $e');
+      return null;
+    }
+  }
+
   Future<void> _ensureUserDocument(UserCredential credential) async {
     try {
       final userDoc = _firestore.collection('users').doc(credential.user!.uid);
@@ -247,6 +303,21 @@ class AuthService implements IAuthService {
 
       await _ensureUserDocument(userCredential);
       await _credentialService.addUserAccount(googleUser.email, null, 'google');
+
+      // Store the credential for future use
+      await _storeOAuthCredential(userCredential, 'google');
+
+      // Store OAuth tokens for future use
+      if (userCredential.credential != null) {
+        final tokenData = {
+          'idToken': userCredential.credential?.token?.toString(),
+          'accessToken': userCredential.credential?.accessToken?.toString(),
+        };
+        await _credentialService.storeOAuthToken(
+            userCredential.user!.email!, tokenData);
+        debugPrint(
+            'Stored Google OAuth token for ${userCredential.user!.email}');
+      }
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -388,6 +459,24 @@ class AuthService implements IAuthService {
         debugPrint('Warning: No email available from Apple Sign-In');
       }
 
+      // Store the credential for future use
+      await _storeOAuthCredential(userCredential, 'apple');
+
+      // Store OAuth tokens for future use
+      if (userCredential.credential != null) {
+        final tokenData = {
+          'identityToken': userCredential.credential?.token?.toString(),
+          'authorizationCode':
+              userCredential.credential?.accessToken?.toString(),
+        };
+        if (userCredential.user?.email != null) {
+          await _credentialService.storeOAuthToken(
+              userCredential.user!.email!, tokenData);
+          debugPrint(
+              'Stored Apple OAuth token for ${userCredential.user!.email}');
+        }
+      }
+
       return userCredential;
     } on SignInWithAppleException catch (e) {
       debugPrint('Apple sign-in exception: ${e.toString()}');
@@ -439,49 +528,130 @@ class AuthService implements IAuthService {
         throw Exception('Account details not found for email: $email');
       }
 
+      // Get the auth type
       final authType = accountDetails['authType'] ?? 'password';
       debugPrint('Account auth type: $authType');
 
-      // Sign in based on the auth type
-      switch (authType) {
-        case 'password':
-          final password = accountDetails['password'];
-          if (password == null || password.isEmpty) {
-            throw Exception('Password not found for account: $email');
+      // First try to use stored OAuth tokens for Google/Apple
+      if (authType == 'google' || authType == 'apple') {
+        // Get stored OAuth token
+        final storedToken = await _credentialService.getOAuthToken(email);
+
+        if (storedToken != null) {
+          debugPrint(
+              'Found stored ${authType} tokens for $email: $storedToken');
+
+          try {
+            if (authType == 'google' && storedToken.containsKey('idToken')) {
+              final googleAuthCredential = GoogleAuthProvider.credential(
+                idToken: storedToken['idToken']?.toString(),
+                accessToken: storedToken['accessToken']?.toString(),
+              );
+
+              await FirebaseAuth.instance
+                  .signInWithCredential(googleAuthCredential);
+              debugPrint(
+                  'Successfully signed in with stored Google credential');
+              return;
+            } else if (authType == 'apple' &&
+                storedToken.containsKey('identityToken')) {
+              final appleCredential = OAuthProvider('apple.com').credential(
+                idToken: storedToken['identityToken']?.toString(),
+                accessToken: storedToken['authorizationCode']?.toString(),
+              );
+
+              await FirebaseAuth.instance.signInWithCredential(appleCredential);
+              debugPrint('Successfully signed in with stored Apple credential');
+              return;
+            }
+          } on FirebaseAuthException catch (e) {
+            debugPrint('Error using stored credential: $e');
+            // Check if the error is due to invalid credential
+            if (e.code == 'invalid-credential') {
+              debugPrint('Stored credential invalid, attempting to refresh');
+              // Attempt to refresh the tokens
+              try {
+                if (authType == 'google') {
+                  // Sign in with Google again to get new tokens
+                  final GoogleSignInAccount? googleUser =
+                      await _googleSignIn.signIn();
+                  if (googleUser != null) {
+                    final GoogleSignInAuthentication googleAuth =
+                        await googleUser.authentication;
+                    final credential = GoogleAuthProvider.credential(
+                      accessToken: googleAuth.accessToken,
+                      idToken: googleAuth.idToken,
+                    );
+                    await FirebaseAuth.instance
+                        .signInWithCredential(credential);
+
+                    // Store the new tokens
+                    final tokenData = {
+                      'idToken': credential.token?.toString(),
+                      'accessToken': credential.accessToken?.toString(),
+                    };
+                    await _credentialService.storeOAuthToken(email, tokenData);
+                    debugPrint('Successfully refreshed Google tokens');
+                    return;
+                  } else {
+                    debugPrint('Google sign-in was cancelled by user');
+                  }
+                } else {
+                  debugPrint('Token refresh not implemented for Apple');
+                }
+              } catch (refreshError) {
+                debugPrint('Error refreshing tokens: $refreshError');
+              }
+            }
+            // Continue to fallback method if token use fails
           }
-          await _auth.signInWithEmailAndPassword(
-              email: email, password: password);
-          break;
-        case 'google':
-          await signInWithGoogle();
-          break;
-        case 'apple':
-          await signInWithApple();
-          break;
-        default:
-          throw Exception('Unsupported authentication type: $authType');
+        } else {
+          debugPrint('No stored token found for $email');
+        }
+
+        // If we get here, we failed to use stored tokens
+        throw Exception(
+            'Unable to switch to ${authType.toUpperCase()} account automatically. Please sign in again.');
       }
 
-      // Set the switched account as active
-      final user = _auth.currentUser;
-      if (user != null) {
-        await _credentialService.setActiveUser(user.uid);
-      }
+      // Handle password authentication
+      if (authType == 'password') {
+        final password =
+            accountDetails['password']; // Get password from account details
+        if (password == null || password.isEmpty) {
+          throw Exception('Password not found for account');
+        }
 
-      // Refresh theme preferences
-      await _ref.read(themeProvider).reloadPreferences();
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        debugPrint('Successfully signed in with password');
+      } else {
+        throw Exception(
+            'Unable to switch to ${authType} account automatically. Please sign in again.');
+      }
     } catch (e) {
       debugPrint('Error switching account: $e');
-      throw Exception('Failed to switch account: $e');
+      rethrow;
     }
   }
 
   @override
   Future<SignOutResult> signOut() async {
     try {
+      // Get email before signing out to clean up tokens
+      final userEmail = _auth.currentUser?.email;
+
       // Sign out from Firebase
       await _auth.signOut();
       debugPrint('Successfully signed out from Firebase');
+
+      // Clean up OAuth token if available
+      if (userEmail != null) {
+        await _credentialService.removeOAuthToken(userEmail);
+        debugPrint('Removed OAuth token for $userEmail');
+      }
 
       // Check contents of accounts list
       var accounts = await _credentialService.getUserAccounts();

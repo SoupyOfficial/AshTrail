@@ -9,6 +9,70 @@ class CredentialService {
   static const String _userAccountsKey = 'user_accounts';
   static const String _activeUserKey = 'active_user';
   static const String _tokenPrefix = 'auth_token_';
+  static const String _oauthTokenPrefix = 'oauth_token_';
+
+  // Consolidated method for storing user passwords
+  Future<void> _savePassword(String email, String password) async {
+    try {
+      await _secureStorage.write(
+          key: 'password_${email.toLowerCase()}', value: password);
+      debugPrint('Stored password for $email');
+    } catch (e) {
+      debugPrint('Error storing password: $e');
+    }
+  }
+
+  // Consolidated method for retrieving user passwords
+  Future<String?> _getPassword(String email) async {
+    try {
+      return await _secureStorage.read(key: 'password_${email.toLowerCase()}');
+    } catch (e) {
+      debugPrint('Error retrieving password: $e');
+      return null;
+    }
+  }
+
+  // Create a key for storing OAuth tokens
+  String _getOAuthTokenKey(String email) =>
+      '$_oauthTokenPrefix${email.toLowerCase()}';
+
+  // Store OAuth tokens specifically for third-party providers
+  Future<void> storeOAuthToken(
+      String email, Map<String, dynamic> tokenData) async {
+    try {
+      final tokenJson = jsonEncode(tokenData);
+      await _secureStorage.write(
+        key: _getOAuthTokenKey(email),
+        value: tokenJson,
+      );
+      debugPrint('Stored OAuth token for $email');
+    } catch (e) {
+      debugPrint('Error storing OAuth token: $e');
+    }
+  }
+
+  // Retrieve OAuth tokens
+  Future<Map<String, dynamic>?> getOAuthToken(String email) async {
+    try {
+      final tokenJson =
+          await _secureStorage.read(key: _getOAuthTokenKey(email));
+      if (tokenJson == null) return null;
+
+      final tokenData = jsonDecode(tokenJson) as Map<String, dynamic>;
+
+      // Ensure all token values are strings (fix for the "int is not a subtype of String?" error)
+      return tokenData.map((key, value) =>
+          MapEntry(key, value is int ? value.toString() : value));
+    } catch (e) {
+      debugPrint('Error retrieving OAuth token: $e');
+      return null;
+    }
+  }
+
+  // Remove OAuth token
+  Future<void> removeOAuthToken(String email) async {
+    await _secureStorage.delete(key: _getOAuthTokenKey(email));
+  }
 
   // Get currently active user ID
   Future<String?> getActiveUserId() async {
@@ -19,6 +83,18 @@ class CredentialService {
   Future<void> setActiveUser(String userId) async {
     await _secureStorage.write(key: _activeUserKey, value: userId);
   }
+
+  /// Retrieves the password for a given email address
+  // Future<String?> getPassword(String email) async { //DEPRECATED
+  //   try {
+  //     const storage = FlutterSecureStorage();
+  //     // Assuming passwords are stored with a key format like 'password_email'
+  //     return await storage.read(key: 'password_${email.toLowerCase()}');
+  //   } catch (e) {
+  //     debugPrint('Error retrieving password: $e');
+  //     return null;
+  //   }
+  // }
 
   // Save a user account without removing existing ones
   Future<void> saveUserAccount(User user,
@@ -48,9 +124,13 @@ class CredentialService {
     // Important: Preserve existing password if none provided
     if (password != null && password.isNotEmpty) {
       accountData['password'] = password;
+      _savePassword(user.email!, password); // Save password to secure storage
     } else if (hasExistingAccount &&
         accounts[indexToUpdate].containsKey('password')) {
-      accountData['password'] = accounts[indexToUpdate]['password']!;
+      final existingPassword = await _getPassword(user.email!);
+      if (existingPassword != null) {
+        accountData['password'] = existingPassword;
+      }
     }
 
     if (hasExistingAccount) {
@@ -121,8 +201,8 @@ class CredentialService {
                 'displayName': (account['displayName'] ?? '').toString(),
                 'authType': (account['authType'] ?? 'password').toString(),
                 // Include password if it exists
-                if (account['password'] != null)
-                  'password': account['password'].toString(),
+                //if (account['password'] != null) //REDUNDANT
+                //  'password': account['password'].toString(),
                 // Extract firstName from displayName if available
                 if ((account['displayName'] ?? '').toString().isNotEmpty)
                   'firstName': (account['displayName'] ?? '')
@@ -191,6 +271,7 @@ class CredentialService {
     // Only add password if provided and not empty
     if (password != null && password.isNotEmpty) {
       accountData['password'] = password;
+      _savePassword(email, password);
     }
 
     if (hasExistingAccount) {
@@ -226,7 +307,13 @@ class CredentialService {
       (account) => account['email'] == email,
       orElse: () => {},
     );
-    return account.isEmpty ? null : account;
+    if (account.isEmpty) return null;
+
+    final password = await _getPassword(email);
+    if (password != null) {
+      account['password'] = password;
+    }
+    return account;
   }
 
   Future<String?> getUserIdForEmail(String email) async {

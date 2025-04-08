@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:smoke_log/services/auth_service.dart';
+import 'package:smoke_log/services/auth_service.dart' as auth_service;
 import '../../widgets/custom_app_bar.dart';
 import '../../providers/consolidated_auth_provider.dart';
 import '../../utils/auth_operations.dart';
@@ -111,7 +111,8 @@ class AccountOptionsScreen extends ConsumerWidget {
                 debugPrint('Logout result: $result');
 
                 // Navigate to the login screen only if fully signed out
-                if (result == SignOutResult.fullySignedOut && context.mounted) {
+                if (result == auth_service.SignOutResult.fullySignedOut &&
+                    context.mounted) {
                   // Use a delay to ensure all cleanup is done before navigation
                   await Future.delayed(const Duration(milliseconds: 300));
                   if (context.mounted) {
@@ -131,6 +132,16 @@ class AccountOptionsScreen extends ConsumerWidget {
                 }
               }
             },
+          ),
+          const Divider(),
+          // Add sign out all button
+          ListTile(
+            leading: const Icon(Icons.logout_outlined, color: Colors.red),
+            title: const Text(
+              'Sign Out All Accounts',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+            onTap: () => _signOutAllAccounts(context, ref),
           ),
           const Divider(),
           ListTile(
@@ -161,5 +172,106 @@ class AccountOptionsScreen extends ConsumerWidget {
   Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
     // Implementation remains similar but uses the new providers
     // ...existing code...
+  }
+
+  // Sign out all accounts method
+  Future<void> _signOutAllAccounts(BuildContext context, WidgetRef ref) async {
+    // Show confirmation dialog first
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out All Accounts'),
+        content: const Text(
+          'Are you sure you want to sign out from all your accounts? '
+          'You will need to log in again with your credentials.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sign Out All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Show loading dialog
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            content: Row(
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 16),
+                const Text('Signing out all accounts...'),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    try {
+      // Get the accounts and sign out from all of them
+      final accounts =
+          await ref.read(credentialServiceProvider).getUserAccounts();
+
+      // First sign out the current account
+      await ref.read(authServiceProvider).signOut();
+
+      // Then remove all saved accounts from credential service
+      for (var account in accounts) {
+        final userId = account['userId'];
+        if (userId != null) {
+          await ref.read(credentialServiceProvider).removeUserAccount(userId);
+        }
+      }
+
+      // The accounts have been cleared in the loop above
+      // No need for additional clearing
+
+      // Close the dialog
+      if (context.mounted &&
+          Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      // Navigate to login screen
+      if (context.mounted) {
+        // Small delay to ensure everything is cleaned up
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      // Close the dialog
+      if (context.mounted &&
+          Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      debugPrint('Error during sign out all: $e');
+
+      // Show error to user
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error signing out: $e')),
+        );
+      }
+    }
   }
 }
