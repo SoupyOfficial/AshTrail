@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:smoke_log/providers/auth_provider.dart';
 import 'package:smoke_log/theme/theme_provider.dart';
+import 'package:smoke_log/services/token_service.dart';
 import 'dart:math';
 import 'credential_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -33,6 +34,11 @@ final activeUserIdProvider = FutureProvider<String?>((ref) async {
 
 // Track the currently active user type
 final userAuthTypeProvider = StateProvider<String?>((ref) => null);
+
+// Add token service provider
+final tokenServiceProvider = Provider<TokenService>((ref) {
+  return TokenService();
+});
 
 // Auth provider for managing authentication
 class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
@@ -166,9 +172,12 @@ class AuthService implements IAuthService {
   final CredentialService _credentialService;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final ProviderRef _ref;
+  late final TokenService _tokenService;
 
   AuthService(
-      this._auth, this._googleSignIn, this._credentialService, this._ref);
+      this._auth, this._googleSignIn, this._credentialService, this._ref) {
+    _tokenService = TokenService();
+  }
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
@@ -262,6 +271,25 @@ class AuthService implements IAuthService {
     }
   }
 
+  // Get and store a custom token after normal sign-in
+  Future<void> _obtainAndStoreCustomToken(User user) async {
+    try {
+      debugPrint('Obtaining custom token for user ${user.uid}');
+      final tokenData = await _tokenService.generateCustomToken(user.uid);
+      final customToken = tokenData['customToken'] as String;
+
+      // Store the custom token
+      await _credentialService.storeCustomToken(user.uid, customToken);
+
+      // Re-authenticate with the custom token for longer session
+      await _auth.signInWithCustomToken(customToken);
+      debugPrint('Successfully authenticated with custom token');
+    } catch (e) {
+      debugPrint('Error obtaining custom token: $e');
+      // Continue without custom token - user is still logged in with normal auth
+    }
+  }
+
   @override
   Future<UserCredential> signInWithEmailAndPassword(
     String email,
@@ -284,8 +312,9 @@ class AuthService implements IAuthService {
           password: password,
           authType: 'password',
         );
-        // Store Firebase token
-        await _storeFirebaseToken(credential.user!);
+
+        // Obtain and store custom token for this user
+        await _obtainAndStoreCustomToken(credential.user!);
       }
 
       return credential;
@@ -328,6 +357,8 @@ class AuthService implements IAuthService {
       // Store Firebase token
       if (userCredential.user != null) {
         await _storeFirebaseToken(userCredential.user!);
+        // Obtain and store custom token for this user
+        await _obtainAndStoreCustomToken(userCredential.user!);
       }
 
       return userCredential;

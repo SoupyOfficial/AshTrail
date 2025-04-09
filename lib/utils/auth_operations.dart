@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smoke_log/screens/login_screen.dart';
 import 'package:smoke_log/services/auth_service.dart';
 import '../providers/consolidated_auth_provider.dart' as consolidated;
+import '../services/token_service.dart';
 
 class AuthOperations {
   /// Switch to another user account with loading indicator and error handling
@@ -45,9 +46,48 @@ class AuthOperations {
       debugPrint('Switch account error: $e');
       debugPrint('---------------------------------------------');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to switch account: $e')),
-        );
+        final bool shouldTryRelogin = e.toString().contains('token') ||
+            e.toString().contains('expired') ||
+            e.toString().contains('invalid');
+
+        if (shouldTryRelogin) {
+          // Close the current dialog
+          if (Navigator.of(context, rootNavigator: true).canPop()) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
+
+          // Show a different dialog asking to re-login
+          await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Session Expired'),
+              content: Text(
+                  'Your session for $email has expired. Please log in again.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              const LoginScreen(isAddingAccount: true)),
+                    );
+                  },
+                  child: const Text('Log In'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to switch account: $e')),
+          );
+        }
       }
       return false;
     } finally {

@@ -9,6 +9,7 @@ import '../services/user_account_service.dart';
 import '../services/auth_account_service.dart';
 import '../services/interfaces/auth_service_interface.dart';
 import '../services/interfaces/account_service_interface.dart';
+import '../services/token_service.dart';
 
 /// Core Firebase Auth provider
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
@@ -38,6 +39,11 @@ final accountServiceProvider = Provider<IAccountService>((ref) {
   final authService = ref.watch(authServiceProvider);
   final credentialService = ref.watch(credentialServiceProvider);
   return AccountService(authService, credentialService);
+});
+
+/// Provider for custom token generation service
+final tokenServiceProvider = Provider<TokenService>((ref) {
+  return TokenService();
 });
 
 /// Stream provider for current authentication state

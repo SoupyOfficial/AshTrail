@@ -10,6 +10,9 @@ class CredentialService {
   static const String _activeUserKey = 'active_user';
   static const String _tokenPrefix = 'auth_token_';
   static const String _oauthTokenPrefix = 'oauth_token_';
+  // New constants for custom token storage
+  static const String _customTokenPrefix = 'custom_token_';
+  static const String _customTokenTimestampPrefix = 'custom_token_timestamp_';
 
   // Consolidated method for storing user passwords
   Future<void> _savePassword(String email, String password) async {
@@ -83,18 +86,6 @@ class CredentialService {
   Future<void> setActiveUser(String userId) async {
     await _secureStorage.write(key: _activeUserKey, value: userId);
   }
-
-  /// Retrieves the password for a given email address
-  // Future<String?> getPassword(String email) async { //DEPRECATED
-  //   try {
-  //     const storage = FlutterSecureStorage();
-  //     // Assuming passwords are stored with a key format like 'password_email'
-  //     return await storage.read(key: 'password_${email.toLowerCase()}');
-  //   } catch (e) {
-  //     debugPrint('Error retrieving password: $e');
-  //     return null;
-  //   }
-  // }
 
   // Save a user account without removing existing ones
   Future<void> saveUserAccount(User user,
@@ -187,6 +178,76 @@ class CredentialService {
     return await _secureStorage.read(key: _tokenPrefix + userId);
   }
 
+  // Store custom token and timestamp
+  Future<void> storeCustomToken(String uid, String customToken) async {
+    try {
+      // Store the custom token
+      await _secureStorage.write(
+        key: _customTokenPrefix + uid,
+        value: customToken,
+      );
+
+      // Store the timestamp when this token was received
+      final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      await _secureStorage.write(
+        key: _customTokenTimestampPrefix + uid,
+        value: timestamp,
+      );
+
+      debugPrint('Stored custom token for user: $uid');
+    } catch (e) {
+      debugPrint('Error storing custom token: $e');
+    }
+  }
+
+  // Retrieve custom token if available and not expired
+  Future<String?> getCustomToken(String uid) async {
+    try {
+      // Get the token
+      final customToken =
+          await _secureStorage.read(key: _customTokenPrefix + uid);
+      if (customToken == null) return null;
+
+      // Get the timestamp
+      final timestampStr = await _secureStorage.read(
+        key: _customTokenTimestampPrefix + uid,
+      );
+      if (timestampStr == null) return null;
+
+      // Check if token is still valid (within 47 hours to have buffer time)
+      final timestamp = int.parse(timestampStr);
+      final tokenAge = DateTime.now().millisecondsSinceEpoch - timestamp;
+      final maxAge = 47 * 60 * 60 * 1000; // 47 hours in milliseconds
+
+      if (tokenAge > maxAge) {
+        debugPrint(
+            'Custom token for $uid has expired (age: ${tokenAge / 3600000} hours)');
+        // Remove expired token
+        await _secureStorage.delete(key: _customTokenPrefix + uid);
+        await _secureStorage.delete(key: _customTokenTimestampPrefix + uid);
+        return null;
+      }
+
+      debugPrint(
+          'Retrieved valid custom token for $uid (age: ${tokenAge / 3600000} hours)');
+      return customToken;
+    } catch (e) {
+      debugPrint('Error retrieving custom token: $e');
+      return null;
+    }
+  }
+
+  // Remove custom token for a user
+  Future<void> removeCustomToken(String uid) async {
+    try {
+      await _secureStorage.delete(key: _customTokenPrefix + uid);
+      await _secureStorage.delete(key: _customTokenTimestampPrefix + uid);
+      debugPrint('Removed custom token for $uid');
+    } catch (e) {
+      debugPrint('Error removing custom token: $e');
+    }
+  }
+
   // Get all saved user accounts
   Future<List<Map<String, String>>> getUserAccounts() async {
     final accountsJson = await _secureStorage.read(key: _userAccountsKey);
@@ -211,11 +272,6 @@ class CredentialService {
                       .first,
               })
           .toList();
-
-      // debugPrint(
-      //     'CredentialService.getUserAccounts: found ${result.length} accounts');
-      // debugPrint(
-      //     'CredentialService.getUserAccounts: account details: ${result.map((a) => "${a['email']}: displayName=${a['displayName']}, firstName=${a['firstName']}").join(', ')}');
 
       return result;
     } catch (e) {
