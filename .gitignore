@@ -55,3 +55,4 @@ android/app/google-services.json
 key.properties
 google-services.json
 *.keystore
+firebase_refresh_backend/firebase-adminsdk.json
