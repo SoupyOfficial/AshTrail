@@ -217,7 +217,7 @@ class CredentialService {
       // Check if token is still valid (within 47 hours to have buffer time)
       final timestamp = int.parse(timestampStr);
       final tokenAge = DateTime.now().millisecondsSinceEpoch - timestamp;
-      final maxAge = 47 * 60 * 60 * 1000; // 47 hours in milliseconds
+      const maxAge = 47 * 60 * 60 * 1000; // 47 hours in milliseconds
 
       if (tokenAge > maxAge) {
         debugPrint(

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class CoordinateFinder extends StatefulWidget {
   final Widget child;
 
-  const CoordinateFinder({Key? key, required this.child}) : super(key: key);
+  const CoordinateFinder({super.key, required this.child});
 
   @override
   State<CoordinateFinder> createState() => _CoordinateFinderState();

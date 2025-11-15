@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:smoke_log/providers/auth_provider.dart';
 import '../services/credential_service.dart';
-import './log_providers.dart';
+import '../presentation/providers/log_providers.dart';
+import '../domain/repositories/log_repository_interface.dart';
+import '../core/di/dependency_injection.dart';
 
 // Provide access to transfer functionality
 final logTransferProvider = Provider<LogTransferService>((ref) {
@@ -12,7 +13,7 @@ final logTransferProvider = Provider<LogTransferService>((ref) {
 
 // Service to handle log transfers
 class LogTransferService {
-  final dynamic logRepository;
+  final ILogRepository logRepository;
   final CredentialService credentialService;
 
   LogTransferService(this.logRepository, this.credentialService);

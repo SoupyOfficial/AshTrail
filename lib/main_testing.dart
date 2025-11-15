@@ -4,9 +4,9 @@ import 'package:smoke_log/screens/home_screen.dart';
 import 'package:smoke_log/theme/app_theme.dart';
 import 'package:smoke_log/theme/theme_provider.dart';
 import 'package:provider/provider.dart' as provider;
-import 'package:smoke_log/services/auth_service.dart';
 import 'package:smoke_log/providers/consolidated_auth_provider.dart'
     as consolidated;
+import 'package:smoke_log/providers/user_account_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // A mock User implementation for testing
@@ -53,7 +53,7 @@ void main() {
         ])),
 
     // Override enriched accounts provider
-    consolidated.enrichedAccountsProvider.overrideWith((ref) => Future.value([
+    enrichedAccountsProvider.overrideWith((ref) => Future.value([
           {
             'userId': 'test-user-id',
             'email': 'test@example.com',

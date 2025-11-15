@@ -3,7 +3,6 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:smoke_log/models/log.dart';
 import 'package:smoke_log/services/log_repository.dart';
 import 'package:smoke_log/services/cache_service.dart';
-import 'package:smoke_log/services/sync_service.dart';
 import 'package:mockito/mockito.dart';
 
 class MockCacheService extends Mock implements CacheService {

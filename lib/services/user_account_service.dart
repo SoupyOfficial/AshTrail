@@ -3,15 +3,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 /// Service responsible for user account operations
+/// Follows Dependency Inversion Principle by requiring dependencies
 class UserAccountService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
+  /// Constructor requires dependencies - no default to direct instance access
   UserAccountService({
-    FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+    required FirebaseFirestore firestore,
+    required FirebaseAuth auth,
+  })  : _firestore = firestore,
+        _auth = auth;
 
   /// Get the current user's email
   String? get currentUserEmail => _auth.currentUser?.email;

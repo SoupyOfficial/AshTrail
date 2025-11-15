@@ -1,11 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
-import '../providers/auth_provider.dart';
+import '../presentation/providers/auth_providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final bool isAddingAccount;

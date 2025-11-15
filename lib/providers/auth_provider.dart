@@ -1,9 +1,13 @@
+// DEPRECATED: This file is deprecated. Use lib/presentation/providers/auth_providers.dart instead.
+// This file will be removed in a future version.
+// @deprecated
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/auth_service.dart';
 import '../services/credential_service.dart';
 
+// DEPRECATED: Use lib/presentation/providers/auth_providers.dart instead
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
 });

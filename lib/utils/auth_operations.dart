@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smoke_log/screens/login_screen.dart';
-import 'package:smoke_log/services/auth_service.dart';
+import '../domain/interfaces/auth_service_interface.dart';
 import '../providers/consolidated_auth_provider.dart' as consolidated;
-import '../services/token_service.dart';
+import '../providers/user_account_provider.dart';
 
 class AuthOperations {
   /// Switch to another user account with loading indicator and error handling
@@ -131,12 +131,12 @@ class AuthOperations {
         barrierDismissible: false,
         builder: (ctx) {
           dialogContext = ctx; // Store the dialog context
-          return AlertDialog(
+          return const AlertDialog(
             content: Row(
               children: [
-                const CircularProgressIndicator(),
-                const SizedBox(width: 16),
-                const Text('Signing out...'),
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('Signing out...'),
               ],
             ),
           );
@@ -192,7 +192,7 @@ class AuthOperations {
   static void _refreshAuthProviders(WidgetRef ref) {
     try {
       ref.invalidate(consolidated.userAccountsProvider);
-      ref.invalidate(consolidated.enrichedAccountsProvider);
+      ref.invalidate(enrichedAccountsProvider);
       ref.invalidate(consolidated.authStateProvider);
       ref.invalidate(consolidated.authTypeProvider);
       ref.invalidate(consolidated.activeAccountProvider);

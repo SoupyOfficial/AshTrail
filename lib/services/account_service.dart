@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import './interfaces/auth_service_interface.dart';
-import './interfaces/account_service_interface.dart';
+import '../../domain/interfaces/auth_service_interface.dart';
+import '../../domain/interfaces/account_service_interface.dart';
 import './credential_service.dart';
 
 /// Implementation of IAccountService

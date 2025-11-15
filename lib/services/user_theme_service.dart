@@ -7,45 +7,25 @@ import 'package:smoke_log/main.dart'; // Import to check if Firebase is initiali
 import 'theme_preference_service.dart';
 
 /// Service to handle cloud storage and synchronization of user theme settings
+/// Follows Dependency Inversion Principle by requiring dependencies
 class UserThemeService {
-  // Use late final to delay initialization
-  late final FirebaseFirestore? _firestore;
-  late final FirebaseAuth? _auth;
+  final FirebaseFirestore? _firestore;
+  final FirebaseAuth? _auth;
   final ThemePreferenceService _localPreferenceService;
   bool _isSyncingFromCloud = false;
-  bool _servicesInitialized = false;
 
+  /// Constructor requires dependencies
+  /// firestore and auth are optional to support screenshot mode and testing
   UserThemeService({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
     ThemePreferenceService? localPreferenceService,
-  }) : _localPreferenceService =
-            localPreferenceService ?? ThemePreferenceService() {
-    // Store provided instances if any
-    if (firestore != null && auth != null) {
-      _firestore = firestore;
-      _auth = auth;
-      _servicesInitialized = true;
-    }
-  }
-
-  // Lazily initialize Firebase services when needed
-  void _initializeServicesIfNeeded() {
-    if (_servicesInitialized) return;
-
-    // Only initialize if Firebase itself is initialized
-    if (isFirebaseInitialized) {
-      _firestore = FirebaseFirestore.instance;
-      _auth = FirebaseAuth.instance;
-      _servicesInitialized = true;
-    }
-  }
+  }) : _firestore = firestore,
+        _auth = auth,
+        _localPreferenceService = localPreferenceService ?? ThemePreferenceService();
 
   /// The current logged in user
-  User? get currentUser {
-    _initializeServicesIfNeeded();
-    return _auth?.currentUser;
-  }
+  User? get currentUser => _auth?.currentUser;
 
   /// Load theme settings, always returning local preferences first for speed,
   /// then updating from cloud in the background if a user is logged in
@@ -54,10 +34,8 @@ class UserThemeService {
     bool isDarkMode = await _localPreferenceService.loadDarkModePreference();
     Color accentColor = await _localPreferenceService.loadAccentColor();
 
-    _initializeServicesIfNeeded();
-
-    // If Firebase isn't initialized yet or we're in screenshot mode, just return local settings
-    if (!_servicesInitialized) {
+    // If Firebase services aren't available, just return local settings
+    if (_firestore == null || _auth == null) {
       return {
         'isDarkMode': isDarkMode,
         'accentColor': accentColor,
@@ -112,12 +90,12 @@ class UserThemeService {
 
   /// Private method to load settings from cloud
   Future<Map<String, dynamic>?> _loadFromCloud() async {
-    if (!_servicesInitialized || _firestore == null || currentUser == null) {
+    if (_firestore == null || currentUser == null) {
       return null;
     }
 
     try {
-      final userDoc = await _firestore!
+      final userDoc = await _firestore
           .collection('users')
           .doc(currentUser!.uid)
           .collection('settings')
@@ -150,10 +128,8 @@ class UserThemeService {
     await _localPreferenceService.saveDarkModePreference(isDarkMode);
     await _localPreferenceService.saveAccentColor(accentColor);
 
-    _initializeServicesIfNeeded();
-
-    // If Firebase isn't initialized yet, just return after saving locally
-    if (!_servicesInitialized) {
+    // If Firebase services aren't available, just return after saving locally
+    if (_firestore == null || _auth == null) {
       return;
     }
 
@@ -163,9 +139,9 @@ class UserThemeService {
     }
 
     // Save to cloud if user is logged in
-    if (currentUser != null && _firestore != null) {
+    if (currentUser != null) {
       try {
-        await _firestore!
+        await _firestore
             .collection('users')
             .doc(currentUser!.uid)
             .collection('settings')

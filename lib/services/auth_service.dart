@@ -1,17 +1,21 @@
+// DEPRECATED: This file is deprecated. Use AuthenticationService from lib/data/services/authentication_service.dart instead.
+// This file will be removed in a future version.
+// @deprecated
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:smoke_log/providers/auth_provider.dart';
+// Note: This file is deprecated. Use AuthenticationService from data/services/authentication_service.dart instead
+// Keeping for backward compatibility during migration
 import 'package:smoke_log/theme/theme_provider.dart';
 import 'package:smoke_log/services/token_service.dart';
-import 'dart:math';
 import 'credential_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'interfaces/auth_service_interface.dart';
+import '../domain/interfaces/auth_service_interface.dart';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../providers/consolidated_auth_provider.dart';
 
 // Provide credential service
 final credentialServiceProvider = Provider<CredentialService>((ref) {
@@ -468,15 +472,17 @@ class AuthService implements IAuthService {
       // Create a proper displayName for fallback purposes
       String? displayName;
       if (firstName != null || lastName != null) {
-        displayName = [
+        final nameList = [
           firstName,
           lastName,
-        ].where((name) => name?.isNotEmpty ?? false).join(' ');
+        ].where((name) => name?.isNotEmpty ?? false);
+        displayName = nameList.isNotEmpty ? nameList.join(' ') : null;
 
         debugPrint('Display name from Apple credential: $displayName');
 
         // Update display name if we got it and it's not already set
-        if (displayName.isNotEmpty &&
+        if (displayName != null &&
+            displayName.isNotEmpty &&
             (userCredential.user?.displayName == null ||
                 userCredential.user?.displayName!.isEmpty == true)) {
           await userCredential.user?.updateDisplayName(displayName);
@@ -498,7 +504,7 @@ class AuthService implements IAuthService {
         await _credentialService.addUserAccount(email, null, 'apple');
         debugPrint('Added Apple user account to credential service: $email');
       }
-
+    
       // Store Firebase token
       if (userCredential.user != null) {
         await _storeFirebaseToken(userCredential.user!);
@@ -764,7 +770,3 @@ class AuthService implements IAuthService {
   }
 }
 
-enum SignOutResult {
-  switchedToAnotherUser, // Indicates another user was switched to
-  fullySignedOut, // Indicates no other users were available
-}

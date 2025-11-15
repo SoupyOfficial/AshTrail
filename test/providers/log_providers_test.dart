@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smoke_log/models/log.dart';
-import 'package:smoke_log/providers/log_providers.dart';
-import 'package:smoke_log/providers/auth_provider.dart';
-import 'package:smoke_log/providers/firebase_providers.dart';
+import 'package:smoke_log/presentation/providers/log_providers.dart';
+import 'package:smoke_log/presentation/providers/auth_providers.dart';
+import 'package:smoke_log/core/di/dependency_injection.dart';
 import '../mocks/log_repository_mock.dart';
 import '../mocks/auth_service_mock.dart';
 import '../helpers/firebase_test_helper.dart'; // Import the Firebase test helper

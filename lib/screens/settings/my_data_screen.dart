@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../providers/user_profile_provider.dart';
-import '../login_screen.dart';
 
 class MyDataScreen extends ConsumerStatefulWidget {
   const MyDataScreen({super.key});

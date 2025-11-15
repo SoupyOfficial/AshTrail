@@ -162,7 +162,7 @@ class LogList extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 color: _getRatingColor(log.moodRating),
-                                fontWeight: log.moodRating! <= 2
+                                fontWeight: log.moodRating <= 2
                                     ? FontWeight.bold
                                     : FontWeight.normal,
                               )),
@@ -171,7 +171,7 @@ class LogList extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 color: _getRatingColor(log.physicalRating),
-                                fontWeight: log.physicalRating! <= 2
+                                fontWeight: log.physicalRating <= 2
                                     ? FontWeight.bold
                                     : FontWeight.normal,
                               )),

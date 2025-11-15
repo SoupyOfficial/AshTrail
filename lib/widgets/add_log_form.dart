@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart' as provider_pkg;
 import '../models/log.dart';
-import '../providers/log_providers.dart';
+import '../presentation/providers/log_providers.dart';
 import '../providers/dropdown_options_provider.dart';
 import '../models/reason_option.dart';
 import '../theme/theme_provider.dart';

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/sync_provider.dart';
-import '../services/sync_service.dart';
+import '../presentation/providers/log_providers.dart';
+import '../domain/interfaces/sync_service_interface.dart';
 
 class SyncIndicator extends ConsumerStatefulWidget {
   const SyncIndicator({super.key});

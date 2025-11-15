@@ -206,7 +206,7 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
                         // Hex input
                         Row(
                           children: [
-                            Text('#'),
+                            const Text('#'),
                             Expanded(
                               child: TextField(
                                 controller: hexController,
@@ -268,7 +268,7 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
                   Switch(
                     value: true,
                     onChanged: (_) {},
-                    activeColor: pickerColor,
+                    activeThumbColor: pickerColor,
                   ),
 
                   // Circle preview
@@ -344,11 +344,11 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Hue',
+                          const Text('Hue',
                               style: TextStyle(
                                   fontWeight: FontWeight.w500, fontSize: 14)),
                           Text('${hue.round()}°',
-                              style: TextStyle(fontSize: 14)),
+                              style: const TextStyle(fontSize: 14)),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -382,7 +382,7 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
                                 color: pickerColor,
                               ),
                               overlayShape:
-                                  RoundSliderOverlayShape(overlayRadius: 16),
+                                  const RoundSliderOverlayShape(overlayRadius: 16),
                               trackHeight: 8,
                               trackShape: const RoundedRectSliderTrackShape(),
                               activeTrackColor: Colors.transparent,
@@ -410,12 +410,12 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Saturation & Brightness',
+                          const Text('Saturation & Brightness',
                               style: TextStyle(
                                   fontWeight: FontWeight.w500, fontSize: 14)),
                           Text(
                               'S: ${(saturation * 100).round()}%, B: ${(value * 100).round()}%',
-                              style: TextStyle(fontSize: 14)),
+                              style: const TextStyle(fontSize: 14)),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -446,7 +446,7 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
                                 Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(8),
-                                    gradient: LinearGradient(
+                                    gradient: const LinearGradient(
                                       begin: Alignment.centerLeft,
                                       end: Alignment.centerRight,
                                       colors: [
@@ -454,7 +454,7 @@ class _AccentColorScreenState extends State<AccentColorScreen> {
                                         Colors
                                             .transparent, // Transparent at right
                                       ],
-                                      stops: const [
+                                      stops: [
                                         0.0,
                                         0.9
                                       ], // Adjust gradient stop

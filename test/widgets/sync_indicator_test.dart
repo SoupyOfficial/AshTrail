@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smoke_log/widgets/sync_indicator.dart';
-import 'package:smoke_log/providers/sync_provider.dart';
+import 'package:smoke_log/presentation/providers/log_providers.dart';
 import 'package:smoke_log/services/sync_service.dart';
 import '../mocks/log_repository_mock.dart';
 import '../helpers/firebase_test_helper.dart'; // Import the Firebase test helper

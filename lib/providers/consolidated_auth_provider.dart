@@ -1,14 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:smoke_log/providers/user_account_provider.dart';
 import 'package:smoke_log/services/account_service.dart';
 import '../services/auth_service.dart';
 import '../services/credential_service.dart';
-import '../services/user_account_service.dart';
-import '../services/auth_account_service.dart';
-import '../services/interfaces/auth_service_interface.dart';
-import '../services/interfaces/account_service_interface.dart';
+import '../domain/interfaces/auth_service_interface.dart';
+import '../domain/interfaces/account_service_interface.dart';
 import '../services/token_service.dart';
 
 /// Core Firebase Auth provider
@@ -86,14 +83,6 @@ final activeAccountProvider =
   // Watch auth state to refresh when it changes
   final _ = ref.watch(authStateProvider);
   return ref.watch(accountServiceProvider).getActiveAccount();
-});
-
-/// Provider for enriched user accounts with profile data
-final enrichedAccountsProvider =
-    FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  final accounts = await ref.watch(userAccountsProvider.future);
-  final userAccountService = ref.watch(userAccountServiceProvider);
-  return userAccountService.getEnrichedAccounts(accounts);
 });
 
 /// Provider for the operation of logging out and optionally switching accounts

@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:smoke_log/services/auth_service.dart';
 
 /// Interface defining authentication operations
 abstract class IAuthService {

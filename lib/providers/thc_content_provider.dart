@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:smoke_log/providers/auth_provider.dart';
+import '../presentation/providers/auth_providers.dart';
 import 'package:smoke_log/services/cache_service.dart';
 import '../models/log.dart';
 import '../domain/use_cases/thc_calculator.dart'; // For basic THC model
 import '../domain/models/thc_advanced_model.dart'; // For advanced THC model
-import 'log_providers.dart';
+import '../presentation/providers/log_providers.dart';
 
 // Provider for user demographic settings
 final userAgeProvider = Provider<int>((ref) => 30);

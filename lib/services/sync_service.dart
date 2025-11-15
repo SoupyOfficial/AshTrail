@@ -2,13 +2,17 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../domain/interfaces/sync_service_interface.dart';
 
-class SyncService {
+/// Service responsible for synchronizing data with the server
+/// Implements ISyncService interface for dependency injection support.
+class SyncService implements ISyncService {
   final FirebaseFirestore _firestore;
   final String userId;
   Timer? _syncTimer;
   final _syncStatusController = StreamController<SyncStatus>.broadcast();
 
+  @override
   Stream<SyncStatus> get syncStatus => _syncStatusController.stream;
 
   // Default sync interval: 5 minutes
@@ -24,6 +28,7 @@ class SyncService {
     return emptyService;
   }
 
+  @override
   void startPeriodicSync({Duration interval = defaultSyncInterval}) {
     // Cancel any existing timer
     stopPeriodicSync();
@@ -32,11 +37,13 @@ class SyncService {
     _syncTimer = Timer.periodic(interval, (_) => syncWithServer());
   }
 
+  @override
   void stopPeriodicSync() {
     _syncTimer?.cancel();
     _syncTimer = null;
   }
 
+  @override
   Future<void> syncWithServer() async {
     // Don't try to sync if there's no user
     if (userId.isEmpty) {
@@ -72,11 +79,13 @@ class SyncService {
     }
   }
 
+  @override
   Future<bool> isOnline() async {
     final connectivityResult = await Connectivity().checkConnectivity();
     return connectivityResult != ConnectivityResult.none;
   }
 
+  @override
   void dispose() {
     // Ensure the periodic sync timer is canceled
     if (_syncTimer != null) {
@@ -90,5 +99,3 @@ class SyncService {
     }
   }
 }
-
-enum SyncStatus { syncing, synced, offline, error, noUser }

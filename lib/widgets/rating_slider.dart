@@ -12,7 +12,7 @@ class RatingSlider extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   const RatingSlider({
-    Key? key,
+    super.key,
     required this.label,
     required this.value,
     this.min = 1,
@@ -20,7 +20,7 @@ class RatingSlider extends StatelessWidget {
     this.divisions = 9,
     this.activeColor,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

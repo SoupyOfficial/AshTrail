@@ -135,9 +135,9 @@ class SettingsScreen extends ConsumerWidget {
                                 color: Colors.grey.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Row(
+                              child: const Row(
                                 mainAxisSize: MainAxisSize.min,
-                                children: const [
+                                children: [
                                   Icon(Icons.refresh, size: 14),
                                   SizedBox(width: 4),
                                   Text(

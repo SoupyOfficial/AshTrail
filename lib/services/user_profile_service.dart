@@ -3,15 +3,18 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_profile.dart';
 
+/// Service responsible for user profile operations
+/// Follows Dependency Inversion Principle by requiring dependencies
 class UserProfileService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
+  /// Constructor requires dependencies - no default to direct instance access
   UserProfileService({
-    FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+    required FirebaseFirestore firestore,
+    required FirebaseAuth auth,
+  })  : _firestore = firestore,
+        _auth = auth;
 
   Future<UserProfile?> getUserProfile() async {
     final user = _auth.currentUser;

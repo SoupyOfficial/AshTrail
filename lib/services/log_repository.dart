@@ -1,3 +1,6 @@
+// DEPRECATED: This class is deprecated. Use LogRepositoryImpl from lib/data/repositories/ instead.
+// This file will be removed in a future version.
+// @deprecated
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,6 +9,7 @@ import '../models/log.dart';
 import 'sync_service.dart';
 import 'cache_service.dart';
 
+@Deprecated('Use LogRepositoryImpl from lib/data/repositories/ instead')
 class LogRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String userId;

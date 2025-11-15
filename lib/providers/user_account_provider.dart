@@ -1,10 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:smoke_log/providers/auth_provider.dart';
+import '../presentation/providers/auth_providers.dart';
 import '../services/user_account_service.dart';
+import '../core/di/dependency_injection.dart';
 
-/// Provider for the UserAccountService
+/// Provider for the UserAccountService with dependency injection
 final userAccountServiceProvider = Provider<UserAccountService>((ref) {
-  return UserAccountService();
+  final firestore = ref.watch(firebaseFirestoreInstanceDirectProvider);
+  final auth = ref.watch(firebaseAuthInstanceProvider);
+  return UserAccountService(
+    firestore: firestore,
+    auth: auth,
+  );
 });
 
 /// Provider for enriched user accounts with additional information

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:smoke_log/services/auth_service.dart' as auth_service;
+import '../../domain/interfaces/auth_service_interface.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../providers/consolidated_auth_provider.dart';
+import '../../providers/user_account_provider.dart';
 import '../../utils/auth_operations.dart';
 import '../login_screen.dart';
 
@@ -74,7 +75,7 @@ class AccountOptionsScreen extends ConsumerWidget {
                                   context, ref, email),
                             ),
                     );
-                  }).toList(),
+                  }),
                   const Divider(),
                   ListTile(
                     leading: const Icon(Icons.person_add),
@@ -111,7 +112,7 @@ class AccountOptionsScreen extends ConsumerWidget {
                 debugPrint('Logout result: $result');
 
                 // Navigate to the login screen only if fully signed out
-                if (result == auth_service.SignOutResult.fullySignedOut &&
+                if (result == SignOutResult.fullySignedOut &&
                     context.mounted) {
                   // Use a delay to ensure all cleanup is done before navigation
                   await Future.delayed(const Duration(milliseconds: 300));
@@ -209,12 +210,12 @@ class AccountOptionsScreen extends ConsumerWidget {
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return AlertDialog(
+          return const AlertDialog(
             content: Row(
               children: [
-                const CircularProgressIndicator(),
-                const SizedBox(width: 16),
-                const Text('Signing out all accounts...'),
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('Signing out all accounts...'),
               ],
             ),
           );

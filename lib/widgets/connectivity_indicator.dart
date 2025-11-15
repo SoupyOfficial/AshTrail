@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/sync_provider.dart';
+import '../presentation/providers/log_providers.dart';
 import '../services/sync_service.dart';
 
 class ConnectivityIndicator extends ConsumerWidget {
-  const ConnectivityIndicator({Key? key}) : super(key: key);
+  const ConnectivityIndicator({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

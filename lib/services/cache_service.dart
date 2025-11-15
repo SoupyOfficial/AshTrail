@@ -2,13 +2,15 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/log.dart';
+import '../domain/interfaces/cache_service_interface.dart';
 
 /// Service that manages persistent caching throughout the app lifecycle.
-class CacheService {
+/// Implements ICacheService interface for dependency injection support.
+class CacheService implements ICacheService {
   static final CacheService _instance = CacheService._internal();
 
   // In-memory cache for logs
-  Map<String, Log> _logsCache = {};
+  final Map<String, Log> _logsCache = {};
 
   // Cache timestamp to track freshness
   DateTime? _logsCacheTimestamp;
@@ -29,16 +31,19 @@ class CacheService {
   CacheService._internal();
 
   // Initialize the cache from persistent storage
+  @override
   Future<void> init() async {
     await _loadLogsFromStorage();
   }
 
   // Get all logs from cache
+  @override
   List<Log> getAllLogs() {
     return _logsCache.values.toList();
   }
 
   // Check if logs cache is fresh
+  @override
   bool isLogsCacheFresh() {
     if (_logsCacheTimestamp == null) return false;
 
@@ -47,6 +52,7 @@ class CacheService {
   }
 
   // Update logs cache with new logs
+  @override
   Future<void> updateLogsCache(List<Log> logs) async {
     // Clear current cache
     _logsCache.clear();
@@ -65,11 +71,13 @@ class CacheService {
   }
 
   // Get a specific log by ID
+  @override
   Log? getLogById(String id) {
     return _logsCache[id];
   }
 
   // Add or update a single log
+  @override
   Future<void> addOrUpdateLog(Log log) async {
     if (log.id == null) return;
 
@@ -81,6 +89,7 @@ class CacheService {
   }
 
   // Remove a log by ID
+  @override
   Future<void> removeLog(String id) async {
     _logsCache.remove(id);
     _logsCacheTimestamp = DateTime.now();
@@ -90,6 +99,7 @@ class CacheService {
   }
 
   // Clear the entire cache
+  @override
   Future<void> clearCache() async {
     _logsCache.clear();
     _logsCacheTimestamp = null;

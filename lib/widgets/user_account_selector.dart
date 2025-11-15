@@ -11,10 +11,10 @@ class UserAccountSelector extends ConsumerWidget {
   final Function(String) onUserSelected;
 
   const UserAccountSelector({
-    Key? key,
+    super.key,
     required this.currentEmail,
     required this.onUserSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,13 +24,13 @@ class UserAccountSelector extends ConsumerWidget {
     return Card(
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+          const Padding(
+            padding: EdgeInsets.all(16.0),
             child: Row(
               children: [
-                const Icon(Icons.account_circle),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.account_circle),
+                SizedBox(width: 8),
+                Text(
                   'Select Account',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),

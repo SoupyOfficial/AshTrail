@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/custom_app_bar.dart';
-import '../providers/log_providers.dart';
+import '../presentation/providers/log_providers.dart';
 import '../widgets/add_log_form.dart';
 import '../widgets/info_display.dart';
 import '../widgets/rating_slider.dart';
@@ -11,7 +11,6 @@ import 'log_list_screen.dart';
 import '../providers/thc_content_provider.dart';
 import '../models/log.dart';
 import '../providers/dropdown_options_provider.dart';
-import '../models/reason_option.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});

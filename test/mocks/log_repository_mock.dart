@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mockito/mockito.dart';
 import 'package:smoke_log/models/log.dart';
-import 'package:smoke_log/services/log_repository.dart';
+import 'package:smoke_log/domain/repositories/log_repository_interface.dart';
 import 'package:smoke_log/services/sync_service.dart';
 
 class MockSyncService extends Mock implements SyncService {
@@ -25,7 +25,7 @@ class MockSyncService extends Mock implements SyncService {
   }
 }
 
-class MockLogRepository extends Mock implements LogRepository {
+class MockLogRepository extends Mock implements ILogRepository {
   final List<Log> _logs;
   final _logsStreamController = StreamController<List<Log>>.broadcast();
   final MockSyncService _syncService = MockSyncService();
@@ -34,8 +34,8 @@ class MockLogRepository extends Mock implements LogRepository {
     _logsStreamController.add(_logs);
   }
 
-  @override
-  SyncService get syncService => _syncService;
+  // Note: ILogRepository doesn't expose syncService, but we keep it for test compatibility
+  MockSyncService get syncService => _syncService;
 
   @override
   Stream<List<Log>> streamLogs({bool cacheOnly = false}) {
@@ -59,6 +59,7 @@ class MockLogRepository extends Mock implements LogRepository {
     _logsStreamController.add(newLogs);
   }
 
+  @override
   void dispose() {
     _logsStreamController.close();
     _syncService.dispose();

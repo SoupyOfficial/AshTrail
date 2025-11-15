@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_account_service.dart';
-import '../services/credential_service.dart';
 import 'auth_provider.dart';
 
 /// Provider for the AuthAccountService

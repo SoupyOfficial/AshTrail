@@ -118,7 +118,7 @@ List<FlSpot> advancedThcConcentrationDataProcessor(
   for (final log in logs) {
     // Map log data to inhalation event parameters
     // Default to joint, but could be enhanced to map reason to method
-    final method = ConsumptionMethod.joint;
+    const method = ConsumptionMethod.joint;
 
     // Use potencyRating as perceived strength if available
     final perceivedStrength = log.potencyRating != null

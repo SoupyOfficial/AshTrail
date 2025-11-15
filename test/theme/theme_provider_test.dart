@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smoke_log/theme/theme_provider.dart';
 import '../mocks/theme_provider_mock.dart';
 
 void main() {

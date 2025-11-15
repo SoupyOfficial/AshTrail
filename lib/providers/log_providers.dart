@@ -1,3 +1,6 @@
+// DEPRECATED: This file is deprecated. Use lib/presentation/providers/log_providers.dart instead.
+// This file will be removed in a future version.
+// @deprecated
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/log_aggregates.dart';
 import '../models/log.dart';
@@ -5,6 +8,7 @@ import '../services/log_repository.dart';
 import './auth_provider.dart';
 import './firebase_providers.dart'; // Add this import
 
+// DEPRECATED: Use lib/presentation/providers/log_providers.dart instead
 // Repository provider with Firebase initialization
 final logRepositoryProvider = Provider<LogRepository>((ref) {
   // Wait for Firebase to be initialized
