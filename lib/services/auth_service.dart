@@ -471,7 +471,7 @@ class AuthService implements IAuthService {
         displayName = [
           firstName,
           lastName,
-        ].where((name) => name != null && name.isNotEmpty).join(' ');
+        ].where((name) => name?.isNotEmpty ?? false).join(' ');
 
         debugPrint('Display name from Apple credential: $displayName');
 
@@ -497,8 +497,6 @@ class AuthService implements IAuthService {
       if (email != null) {
         await _credentialService.addUserAccount(email, null, 'apple');
         debugPrint('Added Apple user account to credential service: $email');
-      } else {
-        debugPrint('Warning: No email available from Apple Sign-In');
       }
 
       // Store Firebase token

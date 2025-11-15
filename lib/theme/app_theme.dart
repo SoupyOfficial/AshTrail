@@ -13,7 +13,7 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: accentColor,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.white,
         shadowColor: Colors.grey[300],
       ),
@@ -35,7 +35,7 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.grey[800],
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.grey[800],
         shadowColor: Colors.black45,
       ),

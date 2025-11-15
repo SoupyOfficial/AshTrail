@@ -158,25 +158,23 @@ class LogList extends StatelessWidget {
                       ),
                       Row(
                         children: [
-                          if (log.moodRating != null)
-                            Text('Mood: ${log.moodRating}/10',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _getRatingColor(log.moodRating),
-                                  fontWeight: log.moodRating! <= 2
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                )),
+                          Text('Mood: ${log.moodRating}/10',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _getRatingColor(log.moodRating),
+                                fontWeight: log.moodRating! <= 2
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              )),
                           const SizedBox(width: 10),
-                          if (log.physicalRating != null)
-                            Text('Physical: ${log.physicalRating}/10',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _getRatingColor(log.physicalRating),
-                                  fontWeight: log.physicalRating! <= 2
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                )),
+                          Text('Physical: ${log.physicalRating}/10',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _getRatingColor(log.physicalRating),
+                                fontWeight: log.physicalRating! <= 2
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              )),
                         ],
                       ),
                       if (log.notes != null && log.notes!.isNotEmpty)
